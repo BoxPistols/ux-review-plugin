@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:           rgba(22, 22, 28, 0.90);
+  --surface:      rgba(255,255,255,0.055);
+  --surface-hi:   rgba(255,255,255,0.09);
+  --border:       rgba(255,255,255,0.09);
+  --border-hi:    rgba(255,255,255,0.16);
+  --text:         rgba(255,255,255,0.93);
+  --text-sub:     rgba(255,255,255,0.52);
+  --text-dim:     rgba(255,255,255,0.30);
+  --accent:       #7c6ffd;
+  --accent-dim:   rgba(124,111,253,0.14);
+  --critical:     #f0503a;
+  --critical-dim: rgba(240,80,58,0.10);
+  --warning:      #f5c842;
+  --warning-dim:  rgba(245,200,66,0.10);
+  --ok:           #30c97e;
+  --ok-dim:       rgba(48,201,126,0.10);
+  --r:            8px;
+  --font:         'Noto Sans JP', 'Hiragino Sans', sans-serif;
+  --fxs:          12px;
+  --fsm:          14px;
+  --mono:         'Noto Sans Mono', 'Roboto Mono', monospace;
+}
+:root[data-theme="light"] {
+  --bg:           rgba(245, 245, 248, 0.94);
+  --surface:      rgba(0,0,0,0.04);
+  --surface-hi:   rgba(0,0,0,0.07);
+  --border:       rgba(0,0,0,0.09);
+  --border-hi:    rgba(0,0,0,0.16);
+  --text:         rgba(0,0,0,0.88);
+  --text-sub:     rgba(0,0,0,0.52);
+  --text-dim:     rgba(0,0,0,0.32);
+  --accent:       #6052e0;
+  --accent-dim:   rgba(96,82,224,0.12);
+  --critical:     #d93a26;
+  --critical-dim: rgba(217,58,38,0.09);
+  --warning:      #c49000;
+  --warning-dim:  rgba(196,144,0,0.09);
+  --ok:           #1a9e5e;
+  --ok-dim:       rgba(26,158,94,0.09);
+}
+:root[data-theme="light"] .layout {
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+}
+:root[data-theme="light"] .sev.critical   { background: rgba(217,58,38,0.12);  color: #c0301a; }
+:root[data-theme="light"] .sev.warning    { background: rgba(196,144,0,0.12);  color: #9a6f00; }
+:root[data-theme="light"] .sev.suggestion { background: rgba(26,158,94,0.12);  color: #127a46; }
+:root[data-theme="light"] .card-url       { color: var(--accent); }
+:root[data-theme="light"] .score-num.high { color: #1a9e5e; }
+:root[data-theme="light"] .score-num.mid  { color: #c49000; }
+:root[data-theme="light"] .score-num.low  { color: #d93a26; }
+
+
+html, body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  background: transparent;
+  color: var(--text);
+  width: 100%; height: 100%;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* ─── HEADER ─────────────────────────────────────────── */
+.header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0; gap: 8px;
+}
+.logo { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.logo-dot { color: var(--accent); }
+.header-right { display: flex; gap: 6px; align-items: center; }
+
+.icon-btn {
+  width: 32px; height: 32px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 7px; cursor: pointer; color: var(--text-sub);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s; flex-shrink: 0;
+}
+.icon-btn:hover { background: var(--surface-hi); border-color: var(--border-hi); color: var(--text); }
+.icon-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.icon-btn svg { display: block; }
+
+/* ─── TABS ───────────────────────────────────────────── */
+.tabs {
+  display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.tab {
+  flex: 1; padding: 9px 8px; text-align: center;
+  font-size: 12px; color: var(--text-dim); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.12s;
+  user-select: none;
+}
+.tab:hover { color: var(--text-sub); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent); color: white;
+  border-radius: 10px; font-size: 12px; font-family: var(--mono);
+  padding: 0 5px; height: 16px; margin-left: 4px; vertical-align: middle;
+}
+
+/* ─── SETTINGS ───────────────────────────────────────── */
+.settings-panel {
+  background: rgba(0,0,0,0.15); border-bottom: 1px solid var(--border);
+  padding: 12px 16px; flex-shrink: 0;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.settings-panel.hidden { display: none; }
+.s-row { display: flex; align-items: center; gap: 10px; }
+.s-label { font-size: 12px; color: var(--text-dim); width: 64px; flex-shrink: 0; }
+.s-input {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 7px 10px; font-size: 14px; color: var(--text);
+  outline: none; font-family: var(--mono); min-width: 0; transition: border-color 0.12s;
+}
+.s-input:focus { border-color: var(--accent); }
+.s-input::placeholder { color: var(--text-dim); }
+.s-select {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 7px 10px; font-size: 14px; color: var(--text); outline: none;
+}
+.s-select:focus { border-color: var(--accent); }
+.s-footer { display: flex; gap: 8px; align-items: center; }
+.btn-save {
+  padding: 6px 18px; background: var(--accent); color: white;
+  border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.btn-save:hover { opacity: 0.85; }
+.save-msg { font-size: 12px; color: var(--ok); }
+
+/* ─── SELECTION BAR ──────────────────────────────────── */
+.sel-bar {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0; min-height: 44px;
+}
+.sel-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim);
+  flex-shrink: 0; transition: all 0.2s;
+}
+.sel-dot.on { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.sel-name {
+  font-size: 14px; font-weight: 500; flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sel-meta { font-size: 12px; color: var(--text-dim); font-family: var(--mono); flex-shrink: 0; }
+.multi-badge {
+  font-size: 12px; background: var(--accent-dim); color: var(--accent);
+  border: 1px solid var(--accent); border-radius: 4px;
+  padding: 1px 7px; flex-shrink: 0;
+}
+
+/* ─── OPTIONS ────────────────────────────────────────── */
+.options-area { padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.chip {
+  padding: 4px 12px; border: 1px solid var(--border); border-radius: 20px;
+  font-size: 12px; color: var(--text-sub); cursor: pointer; user-select: none;
+  background: transparent; transition: all 0.12s;
+}
+.chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+.domain-wrap { position: relative; }
+.domain-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 10px; font-size: 14px; color: var(--text);
+  outline: none; resize: none; height: 38px; font-family: var(--font);
+  line-height: 1.5; overflow: hidden; transition: height 0.15s, border-color 0.12s;
+}
+.domain-input:focus { border-color: var(--accent); height: 72px; overflow: auto; }
+.domain-input::placeholder { color: var(--text-dim); }
+
+/* ─── RUN BAR ────────────────────────────────────────── */
+.run-area { padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.run-row { display: flex; gap: 8px; }
+.btn-run {
+  flex: 1; padding: 10px; background: var(--accent); color: white;
+  border: none; border-radius: var(--r); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: opacity 0.15s; position: relative;
+}
+.btn-run:hover:not(:disabled) { opacity: 0.85; }
+.btn-run:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-flow {
+  padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); font-size: 14px; color: var(--text-sub);
+  cursor: pointer; white-space: nowrap; transition: all 0.12s;
+}
+.btn-flow:hover { background: var(--surface-hi); color: var(--text); border-color: var(--border-hi); }
+.btn-flow.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.shortcut { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: rgba(255,255,255,0.3); font-family: var(--mono); }
+
+/* ─── CONTENT ────────────────────────────────────────── */
+.content {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+}
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* ── Tab panels ── */
+.tab-panel { display: none; flex-direction: column; flex: 1; overflow-y: auto; padding: 12px 16px; gap: 8px; }
+.tab-panel.active { display: flex; }
+.tab-panel::-webkit-scrollbar { width: 4px; }
+.tab-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* ─── EMPTY / LOADING ─────────────────────────────────── */
+.empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 10px; color: var(--text-dim); padding: 24px; text-align: center;
+}
+.empty-icon { font-size: 30px; opacity: 0.3; }
+.empty-title { font-size: 14px; color: var(--text-sub); }
+.empty-desc { font-size: 12px; line-height: 1.8; }
+
+.loading {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px; padding: 24px;
+}
+.ring {
+  width: 28px; height: 28px; border: 2px solid rgba(255,255,255,0.08);
+  border-top-color: var(--accent); border-radius: 50%; animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-label { font-size: 14px; color: var(--text-sub); }
+.loading-step  { font-size: 12px; color: var(--text-dim); }
+
+/* ─── SCORE CARD ──────────────────────────────────────── */
+.score-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px;
+  display: flex; align-items: flex-start; gap: 16px;
+}
+.score-num { font-size: 42px; line-height: 1; font-family: var(--mono); font-weight: 500; }
+.score-num.high { color: var(--ok); }
+.score-num.mid  { color: var(--warning); }
+.score-num.low  { color: var(--critical); }
+.score-right { flex: 1; }
+.score-lbl { font-size: 12px; color: var(--text-dim); letter-spacing: 0.06em; margin-bottom: 6px; }
+.score-summary { font-size: 14px; color: var(--text-sub); line-height: 1.65; }
+
+/* Compared to previous */
+.score-delta {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-family: var(--mono);
+  padding: 2px 8px; border-radius: 4px; margin-top: 6px;
+}
+.score-delta.up   { background: var(--ok-dim);       color: var(--ok); }
+.score-delta.down { background: var(--critical-dim);  color: var(--critical); }
+.score-delta.same { background: var(--surface);       color: var(--text-dim); }
+
+/* ─── FILTER ──────────────────────────────────────────── */
+.filter-row { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.ftag {
+  font-size: 12px; padding: 3px 10px; border: 1px solid var(--border);
+  border-radius: 20px; color: var(--text-dim); background: transparent;
+  cursor: pointer; transition: all 0.1s; font-family: var(--font);
+}
+.ftag:hover { border-color: var(--border-hi); color: var(--text-sub); }
+.ftag.a { background: var(--accent); color: white; border-color: var(--accent); }
+.ftag.c { background: var(--critical); color: white; border-color: var(--critical); }
+.ftag.w { background: var(--warning); color: #111; border-color: var(--warning); }
+.ftag.s { background: var(--ok); color: #111; border-color: var(--ok); }
+.cnt { font-size: 12px; color: var(--text-dim); margin-left: auto; font-family: var(--mono); }
+
+/* ─── COMMENT CARD ────────────────────────────────────── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid transparent; border-radius: var(--r);
+  padding: 13px 14px; animation: fadeUp 0.18s ease both;
+}
+.card.critical   { border-left-color: var(--critical);  background: var(--critical-dim); }
+.card.warning    { border-left-color: var(--warning);   background: var(--warning-dim); }
+.card.suggestion { border-left-color: var(--ok);        background: var(--ok-dim); }
+@keyframes fadeUp { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+
+.card-top { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.sev {
+  font-size: 12px; letter-spacing: 0.06em; padding: 2px 7px;
+  border-radius: 4px; text-transform: uppercase; font-family: var(--mono);
+}
+.sev.critical   { background: rgba(240,80,58,0.18);  color: #ff7a64; }
+.sev.warning    { background: rgba(245,200,66,0.18); color: #f5d142; }
+.sev.suggestion { background: rgba(48,201,126,0.18); color: #4de8a0; }
+.cat  { font-size: 12px; color: var(--text-dim); }
+.hint { font-size: 12px; color: var(--text-dim); margin-left: auto; font-family: var(--mono); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.card-msg { font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 9px; }
+.card-ev-block { margin-bottom: 7px; }
+.card-ev { font-size: 12px; color: var(--text-dim); border-left: 2px solid rgba(255,255,255,0.1); padding-left: 8px; line-height: 1.6; font-family: var(--mono); }
+.card-url { font-size: 12px; color: var(--accent); padding-left: 10px; display: block; word-break: break-all; opacity: 0.8; text-decoration: none; margin-top: 2px; }
+.card-url:hover { opacity: 1; text-decoration: underline; }
+.card-fix { font-size: 14px; color: var(--ok); line-height: 1.6; }
+.card-fix::before { content: "→ "; }
+
+/* ─── AI QUESTIONS (bidirectional mode) ───────────────── */
+.ai-questions {
+  background: var(--accent-dim); border: 1px solid var(--accent);
+  border-radius: var(--r); padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.ai-q-title { font-size: 14px; color: var(--accent); margin-bottom: 2px; }
+.ai-q-desc  { font-size: 12px; color: var(--text-sub); line-height: 1.6; margin-bottom: 8px; }
+.ai-q-item  { display: flex; flex-direction: column; gap: 5px; }
+.ai-q-label { font-size: 12px; color: var(--text-sub); }
+.ai-q-input {
+  background: rgba(0,0,0,0.2); border: 1px solid rgba(124,111,253,0.3);
+  border-radius: 6px; padding: 7px 10px; font-size: 14px; color: var(--text);
+  outline: none; font-family: var(--font); resize: none; min-height: 36px;
+  width: 100%; line-height: 1.5;
+}
+.ai-q-input:focus { border-color: var(--accent); }
+.ai-q-input::placeholder { color: var(--text-dim); }
+.btn-proceed {
+  padding: 9px 20px; background: var(--accent); color: white;
+  border: none; border-radius: 6px; font-size: 14px; font-weight: 500;
+  cursor: pointer; align-self: flex-end; transition: opacity 0.12s;
+}
+.btn-proceed:hover { opacity: 0.85; }
+
+/* ─── FLOW ANALYSIS ───────────────────────────────────── */
+.flow-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px;
+}
+.flow-title { font-size: 14px; color: var(--text-sub); margin-bottom: 10px; }
+.flow-frames { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.flow-frame-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; color: var(--text-sub);
+}
+.flow-frame-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.flow-arrow { color: var(--text-dim); font-family: var(--mono); }
+.flow-insight { font-size: 14px; color: var(--text); line-height: 1.65; }
+.flow-issue { font-size: 14px; color: var(--warning); line-height: 1.65; margin-top: 6px; }
+.flow-issue::before { content: "⚠ "; }
+
+/* ─── CHAT PANEL ──────────────────────────────────────── */
+.chat-area {
+  display: flex; flex-direction: column; flex: 1;
+  overflow: hidden;
+}
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+.chat-msg {
+  display: flex; flex-direction: column; gap: 3px;
+  animation: fadeUp 0.16s ease both;
+}
+.chat-msg.user { align-items: flex-end; }
+.chat-msg.ai   { align-items: flex-start; }
+
+.chat-bubble {
+  max-width: 88%; padding: 10px 13px;
+  border-radius: 12px; font-size: 14px; line-height: 1.65;
+}
+.chat-msg.user .chat-bubble {
+  background: var(--accent); color: white;
+  border-bottom-right-radius: 4px;
+}
+.chat-msg.ai .chat-bubble {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  border-bottom-left-radius: 4px;
+}
+.chat-time { font-size: 12px; color: var(--text-dim); font-family: var(--mono); padding: 0 4px; }
+
+.chat-thinking {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 13px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; border-bottom-left-radius: 4px; width: fit-content;
+}
+.thinking-dot {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--text-dim);
+  animation: bounce 1.2s ease infinite;
+}
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,60%,100%{ transform:translateY(0); } 30%{ transform:translateY(-4px); } }
+
+.chat-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 8px; color: var(--text-dim); text-align: center; padding: 24px;
+}
+.chat-empty-icon { font-size: 26px; opacity: 0.3; }
+.chat-empty-title { font-size: 14px; color: var(--text-sub); }
+.chat-empty-desc  { font-size: 12px; line-height: 1.7; }
+
+.chat-suggestions {
+  padding: 0 16px 10px; display: flex; flex-wrap: wrap; gap: 6px;
+}
+.chat-suggestion {
+  font-size: 12px; padding: 4px 12px; border: 1px solid var(--border);
+  border-radius: 20px; color: var(--text-sub); cursor: pointer;
+  background: transparent; transition: all 0.12s;
+}
+.chat-suggestion:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+.chat-input-area {
+  padding: 10px 16px 12px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+}
+.chat-input {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px; font-size: 14px; color: var(--text);
+  outline: none; resize: none; min-height: 40px; max-height: 120px;
+  font-family: var(--font); line-height: 1.5; overflow-y: auto;
+  transition: border-color 0.12s;
+}
+.chat-input:focus { border-color: var(--accent); }
+.chat-input::placeholder { color: var(--text-dim); }
+.btn-send {
+  width: 36px; height: 36px; background: var(--accent); color: white;
+  border: none; border-radius: 8px; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.12s;
+}
+.btn-send:hover { opacity: 0.85; }
+.btn-send:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-send svg { display: block; }
+
+/* ─── HISTORY PANEL ───────────────────────────────────── */
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 13px 14px; cursor: pointer;
+  transition: all 0.12s;
+}
+.history-card:hover { background: var(--surface-hi); border-color: var(--border-hi); }
+.history-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.history-score { font-size: 22px; font-family: var(--mono); font-weight: 500; }
+.history-score.high { color: var(--ok); }
+.history-score.mid  { color: var(--warning); }
+.history-score.low  { color: var(--critical); }
+.history-meta { flex: 1; min-width: 0; }
+.history-name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-date { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
+.history-summary { font-size: 12px; color: var(--text-sub); line-height: 1.6; }
+
+.delta-pill {
+  font-size: 12px; font-family: var(--mono); padding: 1px 7px;
+  border-radius: 4px; flex-shrink: 0;
+}
+.delta-pill.up   { background: var(--ok-dim); color: var(--ok); }
+.delta-pill.down { background: var(--critical-dim); color: var(--critical); }
+.delta-pill.same { background: var(--surface); color: var(--text-dim); border: 1px solid var(--border); }
+
+/* ─── ACTION BAR ─────────────────────────────────────── */
+.action-area {
+  padding: 10px 16px; border-top: 1px solid var(--border);
+  display: flex; gap: 6px; flex-shrink: 0; background: var(--bg);
+}
+.btn-act {
+  flex: 1; padding: 9px 6px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-sub); font-size: 14px;
+  cursor: pointer; transition: all 0.12s; font-family: var(--font);
+}
+.btn-act:hover:not(:disabled) { background: var(--surface-hi); color: var(--text); border-color: var(--border-hi); }
+.btn-act:disabled { opacity: 0.28; cursor: not-allowed; }
+.btn-act.primary { background: var(--accent); color: white; border-color: var(--accent); }
+.btn-act.primary:hover:not(:disabled) { opacity: 0.85; }
+
+/* ─── RESIZE ─────────────────────────────────────────── */
+.resize-grip {
+  position: fixed; bottom: 0; right: 0; width: 20px; height: 20px;
+  cursor: nwse-resize; z-index: 200; opacity: 0.25; transition: opacity 0.15s;
+  display: flex; align-items: flex-end; justify-content: flex-end; padding: 4px;
+}
+.resize-grip:hover { opacity: 0.7; }
+
+.hidden { display: none !important; }
+.sep { height: 1px; background: var(--border); margin: 4px 0; flex-shrink: 0; }
+
+/* ─── TOOLTIP ─────────────────────────────────────────── */
+.tip-wrap {
+  position: relative; display: inline-flex; align-items: center;
+}
+.tip-icon {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1px solid var(--border-hi); color: var(--text-dim);
+  font-size: 10px; cursor: default; display: inline-flex;
+  align-items: center; justify-content: center;
+  margin-left: 5px; flex-shrink: 0; user-select: none;
+  font-family: var(--mono); transition: all 0.12s;
+  font-style: normal;
+}
+.tip-icon:hover { border-color: var(--accent); color: var(--accent); }
+.tip-bubble {
+  position: absolute; bottom: calc(100% + 7px); left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20,20,28,0.97); border: 1px solid var(--border-hi);
+  border-radius: 8px; padding: 10px 12px;
+  font-size: 12px; color: var(--text-sub); line-height: 1.65;
+  white-space: pre-wrap; width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  pointer-events: none; opacity: 0; transition: opacity 0.15s;
+  z-index: 100;
+}
+.tip-bubble::after {
+  content: ''; position: absolute; top: 100%; left: 50%;
+  transform: translateX(-50%); border: 5px solid transparent;
+  border-top-color: var(--border-hi);
+}
+.tip-wrap:hover .tip-bubble { opacity: 1; }
+
+/* ─── HELP MODAL ───────────────────────────────────────── */
+.help-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300; backdrop-filter: blur(6px); padding: 16px;
+}
+.help-overlay.hidden { display: none; }
+.help-modal {
+  background: rgba(22,22,30,0.98); border: 1px solid var(--border-hi);
+  border-radius: 12px; width: 100%; max-height: 88vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.help-header {
+  padding: 16px 18px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.help-title { font-size: 16px; color: var(--text); }
+.help-close {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: 20px; line-height: 1; padding: 2px 6px;
+  border-radius: 4px; transition: color 0.12s;
+}
+.help-close:hover { color: var(--text); }
+.help-body {
+  flex: 1; overflow-y: auto; padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.help-body::-webkit-scrollbar { width: 4px; }
+.help-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.help-section { display: flex; flex-direction: column; gap: 8px; }
+.help-section-title {
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  letter-spacing: 0.07em; text-transform: uppercase;
+}
+.help-item { display: flex; flex-direction: column; gap: 4px; }
+.help-item-label {
+  font-size: 14px; color: var(--text);
+  display: flex; align-items: center; gap: 7px;
+}
+.help-item-label .badge {
+  font-size: 11px; background: var(--surface-hi); color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 1px 6px; font-family: var(--mono);
+}
+.help-item-desc { font-size: 13px; color: var(--text-sub); line-height: 1.65; padding-left: 2px; }
+.help-divider { height: 1px; background: var(--border); }
+.help-shortcut-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.help-shortcut-row:last-child { border-bottom: none; }
+.help-shortcut-label { font-size: 13px; color: var(--text-sub); }
+.help-shortcut-key {
+  font-size: 12px; font-family: var(--mono); color: var(--text-dim);
+  background: var(--surface-hi); border: 1px solid var(--border);
+  border-radius: 4px; padding: 2px 8px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── HEADER ── -->
+  <div class="header">
+    <span class="logo">UX Review<span class="logo-dot">.</span>AI</span>
+    <span id="remainingBadge" class="hidden" style="font-size:12px;color:var(--text-dim);font-family:var(--mono);margin-left:8px"></span>
+    <div class="header-right">
+      <!-- Help -->
+      <button class="icon-btn" id="btnHelp" title="使い方・ヘルプ">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M5.2 5.2a1.9 1.9 0 013.3 1.3c0 1.2-1.4 1.6-1.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <circle cx="7" cy="10.5" r="0.7" fill="currentColor"/>
+        </svg>
+      </button>
+      <!-- Expand -->
+      <button class="icon-btn" id="btnExpand" title="拡大表示">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <!-- Theme toggle -->
+      <button class="icon-btn" id="btnTheme" title="ライト/ダークモード切替">
+        <svg id="iconSun" width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <circle cx="7.5" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M3 3l1.1 1.1M10.9 10.9L12 12M12 3l-1.1 1.1M4.1 10.9L3 12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <svg id="iconMoon" width="14" height="14" viewBox="0 0 14 14" fill="none" style="display:none">
+          <path d="M11.5 9.5a5.5 5.5 0 01-7-7 5.5 5.5 0 107 7z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <!-- Settings (DB icon) -->
+      <button class="icon-btn" id="btnSettings" title="設定">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <ellipse cx="7" cy="3" rx="5" ry="2" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M2 3v4c0 1.1 2.24 2 5 2s5-.9 5-2V3" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M2 7v4c0 1.1 2.24 2 5 2s5-.9 5-2V7" stroke="currentColor" stroke-width="1.3"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS PANEL ── -->
+  <div class="settings-panel hidden" id="settingsPanel">
+    <div class="s-row">
+      <span class="s-label">API Key</span>
+      <input class="s-input" id="apiKey" type="password" placeholder="sk-..." />
+    </div>
+    <div class="s-row">
+      <span class="s-label">Model</span>
+      <select class="s-select" id="modelSelect">
+        <option value="gpt-5.4-nano" selected>gpt-5.4-nano（デフォルト・高速・低コスト）</option>
+        <option value="gpt-5.4-mini">gpt-5.4-mini（高精度・推論強化）</option>
+      </select>
+    </div>
+    <div class="s-row" style="align-items:flex-start">
+      <span class="s-label" style="padding-top:8px">プロキシ</span>
+      <input class="s-input" id="proxyUrl" type="url" placeholder="https://ux-review-proxy.*.workers.dev（空欄＝自前APIキー）" />
+    </div>
+    <div class="s-row" style="align-items:flex-start">
+      <span class="s-label" style="padding-top:8px">プロジェクト</span>
+      <textarea class="s-input" id="projectKnowledge" rows="5"
+        style="height:96px;resize:vertical;font-family:var(--font);line-height:1.55"
+        placeholder="プロダクト・技術スタック・デザイン原則を登録すると毎回のレビューに自動反映されます&#10;例：&#10;- プロダクト: ドローン点検管理B2B SaaS&#10;- ユーザー: 現場作業者40-55歳&#10;- 技術: React/Next.js, MUI v7, TypeScript&#10;- フェーズ: MVP→PMF段階"></textarea>
+    </div>
+    <div class="s-footer">
+      <button class="btn-save" id="btnSave">保存</button>
+      <span class="save-msg hidden" id="saveMsg">✓ 保存しました</span>
+    </div>
+  </div>
+
+  <!-- ── SELECTION BAR ── -->
+  <div class="sel-bar">
+    <div class="sel-dot" id="selDot"></div>
+    <span class="sel-name" id="selName">フレームを選択してください</span>
+    <span class="multi-badge hidden" id="multiBadge"></span>
+    <span class="sel-meta" id="selMeta"></span>
+  </div>
+
+  <!-- ── OPTIONS ── -->
+  <div class="options-area">
+    <div class="chips">
+      <span class="chip on" data-key="ux">UX / 人間工学</span>
+      <span class="chip on" data-key="ia">情報設計</span>
+      <span class="chip on" data-key="biz">ビジネス要件</span>
+      <span class="chip on" data-key="impl">実装妥当性</span>
+      <span class="chip" data-key="a11y">A11Y</span>
+      <div class="tip-wrap" style="display:inline-flex">
+        <span class="chip" data-key="bidirectional" id="chipBidirectional">💬 双方向モード</span>
+        <div class="tip-bubble">レビュー前にAIがデザイン文脈を
+確認する質問を投げます。
+ユーザーゴール・KPI・実装制約を
+回答するほど精度が上がります。</div>
+      </div>
+    </div>
+    <div class="domain-wrap">
+      <textarea class="domain-input" id="domainKnowledge"
+        placeholder="ビジネス文脈・ペルソナ・要件（任意）　例：ドローン点検B2B、現場作業者40-55歳、MVP段階"></textarea>
+    </div>
+  </div>
+
+  <!-- ── RUN BAR ── -->
+  <div class="run-area">
+    <div class="run-row">
+      <button class="btn-run" id="btnRun">
+        <span id="btnRunLabel">▶ レビュー開始</span>
+        <span class="shortcut">⌘↵</span>
+      </button>
+      <div class="tip-wrap">
+        <button class="btn-flow hidden" id="btnFlow">フロー分析</button>
+        <div class="tip-bubble">複数のフレームを選択した状態で実行します。
+画面遷移の論理性・情報の引き継ぎ・
+ユーザージャーニー上のギャップを
+横断的に分析します。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TABS ── -->
+  <div class="tabs" id="tabBar">
+    <div class="tab active" data-panel="review">レビュー</div>
+    <div class="tab" data-panel="chat">チャット<span class="tab-badge hidden" id="chatBadge">0</span></div>
+    <div class="tab" data-panel="history">履歴<span class="tab-badge hidden" id="histBadge">0</span></div>
+  </div>
+
+  <!-- ── CONTENT ── -->
+  <div class="content">
+
+    <!-- REVIEW panel -->
+    <div class="tab-panel active" id="panel-review">
+
+      <!-- Loading -->
+      <div id="loadingState" class="loading hidden">
+        <div class="ring"></div>
+        <div class="loading-label">AI分析中...</div>
+        <div class="loading-step" id="loadingStep"></div>
+      </div>
+
+      <!-- Bidirectional questions -->
+      <div class="ai-questions hidden" id="aiQuestions">
+        <div class="ai-q-title">💬 デザイン文脈を教えてください</div>
+        <div class="ai-q-desc">任意入力です。回答するほどレビューの精度が上がりますが、空欄のままでも開始できます。</div>
+        <div class="ai-q-item">
+          <div class="ai-q-label">ユーザーゴール <span style="font-size:11px;color:var(--text-dim)">(任意)</span></div>
+          <textarea class="ai-q-input" id="aqGoal" rows="1" placeholder="例：ドローンのフライトプランを作成する"></textarea>
+        </div>
+        <div class="ai-q-item">
+          <div class="ai-q-label">ビジネスKPI <span style="font-size:11px;color:var(--text-dim)">(任意)</span></div>
+          <textarea class="ai-q-input" id="aqKpi" rows="1" placeholder="例：タスク完了率80%以上、操作時間3分以内"></textarea>
+        </div>
+        <div class="ai-q-item">
+          <div class="ai-q-label">実装制約 <span style="font-size:11px;color:var(--text-dim)">(任意)</span></div>
+          <textarea class="ai-q-input" id="aqConstraint" rows="1" placeholder="例：React Native、デザイントークン未整備、2スプリントで実装"></textarea>
+        </div>
+        <button class="btn-proceed" id="btnProceed">この内容でレビューを開始 →</button>
+      </div>
+
+      <!-- Empty state -->
+      <div id="emptyState" class="empty">
+        <div class="empty-icon">✦</div>
+        <div class="empty-title">Figmaでフレームを選択</div>
+        <div class="empty-desc">選択すると自動連動します<br>⌘+Enter でレビュー開始<br>複数選択でフロー分析が使えます</div>
+      </div>
+
+      <!-- Results -->
+      <div id="resultContent" class="hidden">
+        <!-- Score -->
+        <div class="score-card">
+          <div class="score-num" id="scoreNum">—</div>
+          <div class="score-right">
+            <div class="score-lbl">DESIGN SCORE / 100</div>
+            <div class="score-summary" id="scoreSummary"></div>
+            <div id="scoreDelta" class="hidden"></div>
+          </div>
+        </div>
+
+        <!-- Filter -->
+        <div class="filter-row">
+          <button class="ftag a" id="f-all">ALL</button>
+          <button class="ftag" id="f-critical">CRITICAL</button>
+          <button class="ftag" id="f-warning">WARNING</button>
+          <button class="ftag" id="f-suggestion">HINT</button>
+          <span class="cnt" id="cntBadge"></span>
+        </div>
+
+        <!-- Cards -->
+        <div id="cardsList"></div>
+
+        <!-- Flow results (only for multi-frame) -->
+        <div id="flowResult" class="hidden">
+          <div class="sep"></div>
+          <div class="flow-card" id="flowCard"></div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="errorState" class="hidden">
+        <div style="background:var(--critical-dim);border:1px solid rgba(240,80,58,0.25);border-radius:var(--r);padding:13px 14px;font-size:13px;color:#ff7a64;line-height:1.7;white-space:pre-wrap;" id="errorMsg"></div>
+      </div>
+    </div>
+
+    <!-- CHAT panel -->
+    <div class="tab-panel" id="panel-chat">
+      <div class="chat-area">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-empty" id="chatEmpty">
+            <div class="chat-empty-icon">💬</div>
+            <div class="chat-empty-title">レビュー結果について質問できます</div>
+            <div class="chat-empty-desc">レビュー後に表示される候補から選ぶか<br>自由に質問を入力してください</div>
+          </div>
+        </div>
+        <div class="chat-suggestions hidden" id="chatSuggestions"></div>
+        <div class="chat-input-area">
+          <textarea class="chat-input" id="chatInput" placeholder="レビュー内容について質問..." rows="1"></textarea>
+          <button class="btn-send" id="btnSend">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M14 8L2 2l2.5 6L2 14l12-6z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY panel -->
+    <div class="tab-panel" id="panel-history">
+      <div id="historyEmpty" class="empty">
+        <div class="empty-icon">🕐</div>
+        <div class="empty-title">履歴がありません</div>
+        <div class="empty-desc">レビューを実行すると自動保存されます<br>過去のスコアとの比較が可能です</div>
+      </div>
+      <div class="history-list hidden" id="historyList"></div>
+    </div>
+
+  </div>
+
+  <!-- ── ACTION BAR ── -->
+  <div class="action-area">
+    <button class="btn-act" id="btnCopyMD" disabled>Markdown コピー</button>
+  </div>
+
+</div>
+
+<!-- Resize grip -->
+<div class="resize-grip" id="resizeGrip">
+  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+    <path d="M9 1L1 9M5 1L1 5M9 5L5 9" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+  </svg>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id)
+const show = id => $(id).classList.remove('hidden')
+const hide = id => $(id).classList.add('hidden')
+const setStep = t => $('loadingStep').textContent = t
+
+let state = {
+  nodes: [],           // selected node summaries
+  pageFrames: [],
+  reviewData: null,
+  allComments: [],
+  currentFilter: 'all',
+  isMulti: false,
+  history: [],
+
+  // Chat
+  chatHistory: [],     // { role, content }[]
+  chatMsgCount: 0,
+
+  // Bidirectional context
+  biAnswers: null,
+
+  isExpanded: false,
+  fileContext: null,  // Figmaファイル名・ページ構成の自動推定情報
+}
+
+// ══════════════════════════════════════════════════════════════
+// FIGMA MESSAGES
+// ══════════════════════════════════════════════════════════════
+window.onmessage = ({ data }) => {
+  const msg = data.pluginMessage
+  if (!msg) return
+
+  if (msg.type === 'settings-loaded') {
+    if (msg.apiKey) $('apiKey').value = msg.apiKey
+    if (msg.model) { const v=msg.model; $('modelSelect').value=['gpt-5.4-nano','gpt-5.4-mini'].includes(v)?v:'gpt-5.4-nano'; }
+    if (msg.domain) $('domainKnowledge').value = msg.domain
+    if (msg.apiKey) { try { $('settingsPanel').classList.add('hidden') } catch(_){} }
+    if (msg.history?.length) {
+      state.history = msg.history
+      renderHistory()
+    }
+  }
+
+  if (msg.type === 'selection-changed') {
+    if (msg.fileContext) state.fileContext = msg.fileContext
+    state.nodes = msg.nodes
+    state.pageFrames = msg.pageFrames || []
+    state.isMulti = msg.isMulti
+
+    $('selDot').classList.add('on')
+    if (state.isMulti) {
+      $('selName').textContent = `${state.nodes.length}フレームを選択中`
+      $('multiBadge').textContent = `×${state.nodes.length}`
+      show('multiBadge')
+      show('btnFlow')
+    } else {
+      const n = state.nodes[0]
+      $('selName').textContent = n.name
+      hide('multiBadge')
+      hide('btnFlow')
+    }
+    const n = state.nodes[0]
+    $('selMeta').textContent = n.width ? `${n.width}×${n.height}` : ''
+  }
+
+  if (msg.type === 'selection-cleared') {
+    state.nodes = []
+    $('selDot').classList.remove('on')
+    $('selName').textContent = 'フレームを選択してください'
+    hide('multiBadge'); hide('btnFlow')
+    $('selMeta').textContent = ''
+  }
+
+  if (msg.type === 'history-saved') {
+    state.history = msg.history
+    renderHistory()
+  }
+
+  if (msg.type === 'do-copy') {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = msg.text
+      ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0'
+      document.body.appendChild(ta); ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    } catch(_) {}
+    const btn = $('btnCopyMD')
+    btn.textContent = '✓ コピー完了'
+    setTimeout(() => { btn.textContent = 'Markdown コピー' }, 1800)
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
+  document.querySelector(`.tab[data-panel="${name}"]`).classList.add('active')
+  $(`panel-${name}`).classList.add('active')
+}
+
+// ══════════════════════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════════════════════
+function saveSettings() {
+  const settings = {
+    apiKey: $('apiKey').value.trim(),
+    model:  $('modelSelect').value,
+    domain: $('domainKnowledge').value.trim(),
+    proxyUrl: (()=>{ try{return $('proxyUrl').value.trim()}catch(_){return ''} })(),
+    projectKnowledge: (()=>{ try{return $('projectKnowledge').value.trim()}catch(_){return ''} })(),
+  }
+  parent.postMessage({ pluginMessage: { type: 'save-settings', settings } }, '*')
+  $('saveMsg').classList.remove('hidden')
+  setTimeout(() => $('saveMsg').classList.add('hidden'), 1500)
+}
+
+// ══════════════════════════════════════════════════════════════
+// CHIPS
+// ══════════════════════════════════════════════════════════════
+document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => c.classList.toggle('on')))
+function getOpts() {
+  const o = {}
+  document.querySelectorAll('.chip').forEach(c => { o[c.dataset.key] = c.classList.contains('on') })
+  return o
+}
+
+// ══════════════════════════════════════════════════════════════
+// EXPAND / RESIZE
+// ══════════════════════════════════════════════════════════════
+const SIZE_NORMAL  = { w: 420, h: 680 }
+const SIZE_EXPAND  = { w: Math.round(screen.width * 0.78), h: Math.round(screen.height * 0.82) }
+
+// Theme toggle
+let isDark = true
+function toggleTheme() {
+  isDark = !isDark
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
+  $('iconSun').style.display  = isDark ? 'block' : 'none'
+  $('iconMoon').style.display = isDark ? 'none'  : 'block'
+  $('btnTheme').classList.toggle('active', !isDark)
+}
+// Initialize dark
+document.documentElement.setAttribute('data-theme', 'dark')
+
+function toggleExpand() {
+  state.isExpanded = !state.isExpanded
+  const sz = state.isExpanded ? SIZE_EXPAND : SIZE_NORMAL
+  postResize(sz.w, sz.h)
+  $('btnExpand').classList.toggle('active', state.isExpanded)
+}
+
+function postResize(w, h) {
+  parent.postMessage({ pluginMessage: { type: 'resize', width: Math.round(w), height: Math.round(h) } }, '*')
+}
+
+;(function initResize() {
+  const g = $('resizeGrip')
+  let drag = false, sx, sy, sw, sh
+  g.addEventListener('mousedown', e => { drag=true; sx=e.clientX; sy=e.clientY; sw=window.innerWidth; sh=window.innerHeight; e.preventDefault() })
+  window.addEventListener('mousemove', e => { if(!drag) return; postResize(Math.max(380, sw+e.clientX-sx), Math.max(500, sh+e.clientY-sy)) })
+  window.addEventListener('mouseup', () => { drag=false })
+})()
+
+// ══════════════════════════════════════════════════════════════
+// NODE → TEXT
+// ══════════════════════════════════════════════════════════════
+function nodeToText(n, depth=0) {
+  if (depth>4) return ''
+  const ind='  '.repeat(depth)
+  let s = `${ind}[${n.type}] ${n.name}`
+  if (n.componentName) s += ` (Component: ${n.componentName})`
+  if (n.width) s += ` ${n.width}×${n.height}px`
+  s += '\n'
+  if (n.children) n.children.slice(0,20).forEach(c => { s += nodeToText(c, depth+1) })
+  return s
+}
+function collectTexts(n, r=[]) {
+  if (n.texts) r.push(...n.texts)
+  if (n.children) n.children.forEach(c => collectTexts(c,r))
+  return r
+}
+function collectIx(n, r=[]) {
+  if (n.interactions?.length) n.interactions.forEach(x => r.push(`- ${n.name}: ${x}`))
+  if (n.children) n.children.forEach(c => collectIx(c,r))
+  return r
+}
+
+function buildPromptText(nodes) {
+  let t = ''
+  nodes.forEach((n, i) => {
+    t += `## フレーム${nodes.length>1 ? ` ${i+1}` : ''}: ${n.name}\n`
+    t += `タイプ: ${n.type}  サイズ: ${n.width}×${n.height}px\n\n`
+    t += `### コンポーネント階層\n` + nodeToText(n, 0)
+    const texts = collectTexts(n)
+    if (texts.length) t += `\n### テキストラベル\n` + texts.slice(0,40).map(v=>`- "${v}"`).join('\n')
+    const ixs = collectIx(n)
+    if (ixs.length) t += `\n### インタラクション\n` + ixs.join('\n')
+    t += '\n\n'
+  })
+  if (state.pageFrames.length) {
+    t += `## ページ全体の構成（IA参考）\n`
+    state.pageFrames.forEach(p => {
+      if (p.frames.length) t += `[${p.pageName}] ${p.frames.map(f=>f.name).slice(0,20).join(' → ')}\n`
+    })
+  }
+  return t
+}
+
+// ══════════════════════════════════════════════════════════════
+// OPENAI API CALL
+// ══════════════════════════════════════════════════════════════
+async function callOpenAI(messages, model, jsonMode=true) {
+  const apiKey   = (()=>{ try{return $('apiKey').value.trim()}catch(_){return ''} })()
+  const proxyUrl = (()=>{ try{return $('proxyUrl').value.trim()}catch(_){return ''} })()
+  const isGpt5   = model.startsWith('gpt-5') || model.startsWith('o')  // gpt-5.4-nano/mini も含む
+
+  const body = { model, messages }
+  if (isGpt5) { body.max_completion_tokens = 2800 }
+  else        { body.max_tokens = 2800; body.temperature = 0.2 }
+  if (jsonMode) body.response_format = { type: 'json_object' }
+
+  let endpoint, headers = { 'Content-Type': 'application/json' }
+
+  if (proxyUrl) {
+    // プロキシ経由（APIキー不要、レート制限付き）
+    const base = proxyUrl.replace(/\/+$/, '')
+    endpoint = base.endsWith('/v1/chat/completions') ? base : base + '/v1/chat/completions'
+    headers['X-User-ID'] = await getUserId()
+  } else if (apiKey) {
+    // 直接接続（自前APIキー）
+    endpoint = 'https://api.openai.com/v1/chat/completions'
+    headers['Authorization'] = 'Bearer ' + apiKey
+  } else {
+    throw new Error('APIキーまたはプロキシURLを設定してください（⚙ 設定）')
+  }
+
+  const res = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body) })
+
+  if (res.status === 429) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error(e.error || '1日の使用上限（50回）に達しました。明日またご利用ください。')
+  }
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error(e.error?.message || 'API エラー [' + res.status + ']')
+  }
+
+  const data = await res.json()
+
+  // 残り回数表示（プロキシ使用時）
+  const rem = res.headers?.get?.('X-RateLimit-Remaining') ?? data._remaining
+  if (rem != null) {
+    try {
+      const badge = $('remainingBadge')
+      badge.textContent = '残り ' + rem + '/50'
+      badge.classList.remove('hidden')
+      badge.style.color = Number(rem) <= 5 ? 'var(--critical)' : 'var(--text-dim)'
+    } catch(_) {}
+  }
+
+  return data.choices[0].message.content
+}
+
+async function getUserId() {
+  try {
+    let uid = sessionStorage.getItem('_ux_uid')
+    if (!uid) {
+      uid = 'u_' + Math.random().toString(36).slice(2) + Date.now().toString(36)
+      sessionStorage.setItem('_ux_uid', uid)
+    }
+    return uid
+  } catch { return 'anonymous' }
+}
+
+// ══════════════════════════════════════════════════════════════
+// BUILD SYSTEM PROMPT
+// ══════════════════════════════════════════════════════════════
+function buildSystemPrompt(opts, domain, biAnswers, isFlow, prevEntry) {
+  // ── ファイルコンテキストからプロダクト推定 ──────────────────
+  const fc = state.fileContext
+  let autoContext = ''
+  if (fc) {
+    autoContext += `\n【Figmaファイル自動検出情報】\n`
+    autoContext += `ファイル名: ${fc.fileName}\n`
+    if (fc.pages?.length) autoContext += `ページ構成: ${fc.pages.join(' / ')}\n`
+    if (fc.projectType) autoContext += `推定プロダクト種別: ${fc.projectType}\n`
+    if (fc.estimatedStack) autoContext += `推定技術スタック: ${fc.estimatedStack}\n`
+  }
+
+  // ── プロジェクト登録知識 ──────────────────────────────────
+  const pk = (()=>{ try{return $('projectKnowledge').value.trim()}catch(_){return ''} })()
+
+  // ── 前回履歴 ──────────────────────────────────────────────
+  let prevCtx = ''
+  if (prevEntry) {
+    const prevCriticals = (prevEntry.comments||[])
+      .filter(c => c.severity === 'critical')
+      .map(c => c.message?.slice(0,80))
+      .filter(Boolean)
+    prevCtx = `\n【前回レビュー（${new Date(prevEntry.timestamp).toLocaleDateString('ja-JP')}、スコア${prevEntry.score}点）】\n前回のCRITICAL課題: ${prevCriticals.join('／') || 'なし'}\n前回から改善・悪化した点があれば明示すること。\n`
+  }
+
+  // ── CORE SYSTEM PROMPT ────────────────────────────────────
+  let sys = `あなたはB2B産業システム・業務システムのUI/UXデザインを専門とするシニアデザインレビュアーです。
+Figmaのノード構造データ（テキスト形式）からデザインの問題を分析します。
+
+【最重要：評価の優先順位（この順位で指摘してください）】
+
+★★★ 最優先 — 画面構造・コンポーネント選定の妥当性
+- このコンテキストでダイアログ/モーダルを使うべきか、別画面遷移にすべきか
+- フォームの種別選定（インラインフォーム vs モーダルフォーム vs 専用ページ）
+- ボタンの配置・グループ化（プライマリ/セカンダリ/デストラクティブの位置関係）
+- フォームグループの並べ方とラベル/入力の対応関係
+- テーブル/リスト/カードの使い分けの妥当性
+- エラー状態・空状態・ローディング状態の設計有無
+
+★★★ 最優先 — 前後画面との関係性・フロー整合性
+- この画面の前後に何があり、文脈が繋がっているか
+- ユーザーが持ち込む情報と、この画面で完結できる情報の整合性
+- 一覧→詳細→編集→確認→完了のフロー上の位置と情報設計
+
+★★ 高優先 — ビジネス要件・バックエンド整合性
+- フォームフィールドの種別・バリデーション要件がバックエンドスキーマと一致するか
+- CRUD操作の権限設計（誰がCreate/Update/Delete できるか）がUIに反映されているか
+- 業務フローの上流・下流システムとのデータ受け渡し設計
+
+★ 中優先 — ユーザビリティ・操作効率
+- タスク完了までのステップ数・認知負荷
+- エラーリカバリーの設計
+
+▽ 低優先（指摘は最低限に留める）
+- ピクセル精度・スペーシングの細部
+- アクセシビリティ（重大な違反のみ指摘）
+- カラー・タイポグラフィの細部
+
+【B2B産業システム開発の特徴として特に注意すること】
+- PowerPoint的な画面構成になっていないか（情報の羅列ではなく操作フロー中心の設計か）
+- 現場作業者が使うモバイル/タブレット操作の文脈
+- 承認フロー・権限管理・監査ログの設計が必要な場面かどうか
+- 既存システムからの移行・データ移管の観点
+${pk ? `\n【登録済みプロジェクト知識】\n${pk}` : ''}${autoContext}${prevCtx}
+${biAnswers ? `\n【デザイナー回答】\nユーザーゴール: ${biAnswers.goal||'未回答'}\nKPI: ${biAnswers.kpi||'未回答'}\n実装制約: ${biAnswers.constraint||'未回答'}` : ''}
+${domain ? `\n【ビジネス文脈・補足】\n${domain}` : ''}`
+
+  // ── 評価軸（選択されたものだけ）──────────────────────────
+  const criteria = []
+  if (opts.ux)   criteria.push("UX: Nielsen 10原則(https://www.nngroup.com/articles/ten-usability-heuristics/)、特にヒューリスティック#1(可視性)#3(ユーザーコントロール)#5(エラー防止)#6(再認識)を優先")
+  if (opts.ia)   criteria.push("IA: ナビゲーション階層の論理性、ラベリングと業務用語の整合性(https://www.nngroup.com/articles/ia-vs-navigation/)")
+  if (opts.biz)  criteria.push("ビジネス要件: ステークホルダー要件の可視化、CTA設計、KPIタスク完了設計")
+  if (opts.impl) criteria.push("実装妥当性: Material Design 3(https://m3.material.io/)コンポーネント仕様、44dp最小タッチターゲット、実装コスト対効果")
+  if (opts.a11y) criteria.push("A11Y: WCAG 2.1 AA(https://www.w3.org/WAI/WCAG21/quickref/)、コントラスト比4.5:1、最小フォント12px")
+  if (criteria.length) sys += `\n\n【評価基準】\n${criteria.map(c=>`- ${c}`).join('\n')}`
+
+  sys += `
+
+出力: 必ずJSON形式のみ。前置き・後置き・コードブロック記号は一切不要。
+
+{
+  "overallScore": 整数1-100,
+  "summary": "3〜4文。スコアの根拠・最重要課題・ビジネス観点での影響を含める。B2Bシステムとして適切な情報設計・操作フロー設計ができているかを中心に評価",
+  "comments": [
+    {
+      "severity": "critical|warning|suggestion",
+      "category": "カテゴリ（日本語・具体的に：例『ダイアログ選定の妥当性』『フォームグループ構造』）",
+      "message": "現状の説明→なぜ問題か→B2Bシステムとしてのビジネス・開発への影響。200文字以上、断定形",
+      "evidence": "根拠となる原則名・判断基準・具体的数値",
+      "evidenceUrl": "公式ドキュメントURL",
+      "suggestion": "代替案を含む実装指示。例：『モーダルではなくページ遷移に変更し、URLを/projects/:id/editとして設計する。理由：フォームが7フィールド以上あるため』",
+      "nodeHint": "対象コンポーネント名（任意）"
+    }
+  ]${isFlow ? `,
+  "flowAnalysis": {
+    "flowScore": 整数1-100,
+    "transitionLogic": "画面遷移の論理性（前後の文脈が業務フロー上適切か）",
+    "continuityIssues": ["情報の引き継ぎ・継続性の問題"],
+    "journeyGaps": "ユーザージャーニー上のギャップと業務フロー整合性"
+  }` : ''}
+}
+
+【生成品質の絶対ルール】
+1. 件数: 最大4件（少数精鋭。一般論・ピクセル指摘は禁止）
+2. message: 200文字以上、断定形。「〜かもしれない」「〜の可能性がある」は禁止
+3. suggestion: 必ず代替案を含む。コンポーネント名・URL設計・フィールド数など具体的数値を含む
+4. ポジティブ評価を必ず1件含める（severity: suggestion）
+5. 対象コンポーネントが特定できない曖昧な指摘は記述しない`
+
+  return sys
+}
+
+// ══════════════════════════════════════════════════════════════
+// BIDIRECTIONAL MODE
+// ══════════════════════════════════════════════════════════════
+function showBidirectionalQuestions() {
+  hide('emptyState'); hide('resultContent'); hide('errorState')
+  show('aiQuestions')
+}
+
+// ══════════════════════════════════════════════════════════════
+// RUN REVIEW
+// ══════════════════════════════════════════════════════════════
+async function runReview(biAnswers=null) {
+  const apiKey = $('apiKey').value.trim()
+  if (!apiKey) { showError('⚙ 設定からOpenAI API Keyを入力して保存してください'); return }
+  if (!state.nodes.length) { showError('Figmaでフレームを選択してください'); return }
+
+  hide('emptyState'); hide('errorState'); hide('resultContent'); hide('aiQuestions')
+  show('loadingState')
+  $('btnRun').disabled = true; $('btnFlow').disabled = true
+
+  try {
+    const model  = $('modelSelect').value
+    const opts   = getOpts()
+    const domain = $('domainKnowledge').value.trim()
+    const isFlow = state.isMulti && opts['flow-mode']
+
+    // 履歴から同フレームの前回データを探す
+    const frameId = state.nodes[0]?.id
+    const prevEntry = state.history.find(e => e.frameId === frameId) || null
+
+    parent.postMessage({ pluginMessage: { type: 'save-settings', settings: { apiKey, model, domain } } }, '*')
+
+    setStep('構造を解析中...')
+    const promptText = buildPromptText(state.nodes)
+    const system = buildSystemPrompt(opts, domain, biAnswers, state.isMulti, prevEntry)
+
+    setStep('OpenAI に送信中...')
+    const raw = await callOpenAI([
+      { role: 'system', content: system },
+      { role: 'user', content: promptText },
+    ], model)
+
+    const result = JSON.parse(raw)
+    state.reviewData = result
+    state.allComments = result.comments || []
+
+    // チャット履歴を初期化（新しいレビュー文脈として）
+    state.chatHistory = [
+      { role: 'system', content: `あなたはUX/UIデザインの専門家です。以下のFigmaデザインレビュー結果について、デザイナーからの質問に答えてください。\n\nレビュー結果:\nスコア: ${result.overallScore}/100\n${result.summary}\n\n指摘事項:\n${(result.comments||[]).map(c=>`[${c.severity}] ${c.category}: ${c.message}`).join('\n')}` },
+    ]
+    state.chatMsgCount = 0
+    renderChatBadge()
+
+    // 前回との差分
+    const prevScore = prevEntry?.score
+    renderResult(result, prevScore)
+
+    // 履歴保存
+    const entry = {
+      id: Date.now().toString(),
+      timestamp: Date.now(),
+      frameName: state.nodes.map(n=>n.name).join(' + '),
+      frameId: state.nodes[0]?.id,
+      score: result.overallScore,
+      summary: result.summary,
+      comments: result.comments || [],
+      domain,
+    }
+    parent.postMessage({ pluginMessage: { type: 'save-review-history', entry } }, '*')
+
+    // チャットタブにサジェスト表示
+    showChatSuggestions()
+
+  } catch(e) {
+    showError(e.message)
+  } finally {
+    hide('loadingState')
+    $('btnRun').disabled = false; $('btnFlow').disabled = false
+  }
+}
+
+// フロー分析モード
+async function runFlowAnalysis() {
+  $('chipBidirectional') // not relevant for flow, just run
+  $('btnFlow').classList.add('active')
+  // temporarily enable "flow-mode" chip logically
+  await runReview(null)
+  $('btnFlow').classList.remove('active')
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════════
+function renderResult(data, prevScore) {
+  const score = data.overallScore || 0
+  const el = $('scoreNum')
+  el.textContent = score
+  el.className = 'score-num ' + (score>=75?'high':score>=50?'mid':'low')
+  $('scoreSummary').textContent = data.summary || ''
+
+  // Delta
+  const deltaEl = $('scoreDelta')
+  if (prevScore != null) {
+    const diff = score - prevScore
+    const cls  = diff > 0 ? 'up' : diff < 0 ? 'down' : 'same'
+    const sign = diff > 0 ? '+' : ''
+    deltaEl.className = `score-delta ${cls}`
+    deltaEl.textContent = `前回比 ${sign}${diff}点（前回 ${prevScore}点）`
+    show('scoreDelta')
+  } else {
+    hide('scoreDelta')
+  }
+
+  state.currentFilter = 'all'
+  document.querySelectorAll('.ftag').forEach(t=>t.className='ftag')
+  $('f-all').className = 'ftag a'
+  renderCards()
+  show('resultContent')
+
+  // フロー分析結果
+  if (data.flowAnalysis) {
+    const fa = data.flowAnalysis
+    const fc = $('flowCard')
+    fc.innerHTML = `
+      <div class="flow-title">🔗 フロー分析 — スコア ${fa.flowScore}/100</div>
+      <div class="flow-frames">${state.nodes.map((n,i)=>`
+        <div class="flow-frame-item">
+          <div class="flow-frame-dot"></div>
+          <span>${n.name}</span>
+          ${i<state.nodes.length-1?'<span class="flow-arrow">→</span>':''}
+        </div>`).join('')}
+      </div>
+      <div class="flow-insight">${fa.transitionLogic}</div>
+      ${fa.continuityIssues?.map(i=>`<div class="flow-issue">${i}</div>`).join('')||''}
+      ${fa.journeyGaps?`<div style="margin-top:8px;font-size:14px;color:var(--text-sub);line-height:1.65;">${fa.journeyGaps}</div>`:''}
+    `
+    show('flowResult')
+  } else {
+    hide('flowResult')
+  }
+
+  $('btnCopyMD').disabled = false
+}
+
+function renderCards() {
+  const VALID = ['critical','warning','suggestion']
+  // Normalize and filter out malformed entries
+  const normalized = state.allComments.map(c => ({
+    ...c,
+    severity: VALID.includes(c.severity) ? c.severity : 'suggestion',
+    category: c.category || '—',
+    message:  c.message  || '',
+    evidence: c.evidence || '',
+    suggestion: c.suggestion || '',
+  }))
+  state.allComments = normalized
+
+  const shown = state.currentFilter==='all'
+    ? normalized
+    : normalized.filter(c=>c.severity===state.currentFilter)
+  $('cntBadge').textContent = `${shown.length}/${normalized.length}`
+  $('cardsList').innerHTML = shown.map((c,i)=>`
+    <div class="card ${c.severity}" style="animation-delay:${i*22}ms">
+      <div class="card-top">
+        <span class="sev ${c.severity}">${c.severity.toUpperCase()}</span>
+        <span class="cat">${c.category}</span>
+        ${c.nodeHint?`<span class="hint">${c.nodeHint}</span>`:''}
+      </div>
+      <div class="card-msg">${c.message}</div>
+      <div class="card-ev-block">
+        <div class="card-ev">${c.evidence}</div>
+        ${c.evidenceUrl?`<a class="card-url" href="${c.evidenceUrl}" target="_blank">${c.evidenceUrl}</a>`:''}
+      </div>
+      <div class="card-fix">${c.suggestion}</div>
+    </div>
+  `).join('')
+}
+
+function setFilter(type) {
+  state.currentFilter = type
+  const m = { all:'a', critical:'c', warning:'w', suggestion:'s' }
+  document.querySelectorAll('.ftag').forEach(t=>t.className='ftag')
+  $(`f-${type}`).className = `ftag ${m[type]}`
+  renderCards()
+}
+
+// ══════════════════════════════════════════════════════════════
+// CHAT
+// ══════════════════════════════════════════════════════════════
+const SUGGESTIONS = [
+  'criticalの問題をもっと詳しく教えてください',
+  'エンジニアへの実装指示書を作成してください',
+  'ビジネスオーナーへの説明文を書いてください',
+  '改善後のスコアはどのくらい期待できますか？',
+  'このデザインの強みを教えてください',
+]
+
+function showChatSuggestions() {
+  const area = $('chatSuggestions')
+  area.innerHTML = SUGGESTIONS.map(s =>
+    `<button class="chat-suggestion" data-q="${s}">${s}</button>`
+  ).join('')
+  show('chatSuggestions')
+  hide('chatEmpty')
+}
+
+function appendChatMessage(role, content) {
+  const empty = $('chatEmpty')
+  if (empty) hide('chatEmpty')
+
+  const msgs = $('chatMessages')
+  const now = new Date().toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' })
+  const div = document.createElement('div')
+  div.className = `chat-msg ${role}`
+  div.innerHTML = `
+    <div class="chat-bubble">${content.replace(/\n/g,'<br>')}</div>
+    <div class="chat-time">${now}</div>
+  `
+  msgs.appendChild(div)
+  msgs.scrollTop = msgs.scrollHeight
+
+  if (role === 'ai') {
+    state.chatMsgCount++
+    renderChatBadge()
+  }
+}
+
+function showThinking() {
+  const msgs = $('chatMessages')
+  const el = document.createElement('div')
+  el.id = 'chatThinking'
+  el.className = 'chat-msg ai'
+  el.innerHTML = `<div class="chat-thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div>`
+  msgs.appendChild(el); msgs.scrollTop = msgs.scrollHeight
+}
+
+function removeThinking() { $('chatThinking')?.remove() }
+
+function renderChatBadge() {
+  const b = $('chatBadge')
+  if (state.chatMsgCount > 0) {
+    b.textContent = state.chatMsgCount; show('chatBadge')
+  } else hide('chatBadge')
+}
+
+async function sendChat(text) {
+  if (!text.trim()) return
+  if (!state.reviewData) { appendChatMessage('ai', 'まずレビューを実行してください。'); return }
+  const apiKey = $('apiKey').value.trim()
+  if (!apiKey) { appendChatMessage('ai', 'API Keyが設定されていません。'); return }
+
+  hide('chatSuggestions')
+  appendChatMessage('user', text)
+  state.chatHistory.push({ role: 'user', content: text })
+
+  $('btnSend').disabled = true; $('chatInput').disabled = true
+  showThinking()
+
+  try {
+    const model = $('modelSelect').value
+    const reply = await callOpenAI(state.chatHistory, model, false)
+    removeThinking()
+    appendChatMessage('ai', reply)
+    state.chatHistory.push({ role: 'assistant', content: reply })
+  } catch(e) {
+    removeThinking()
+    appendChatMessage('ai', `エラーが発生しました: ${e.message}`)
+  } finally {
+    $('btnSend').disabled = false; $('chatInput').disabled = false
+    $('chatInput').focus()
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════════════════════════
+function renderHistory() {
+  if (!state.history.length) { show('historyEmpty'); hide('historyList'); return }
+  hide('historyEmpty'); show('historyList')
+
+  const list = $('historyList')
+  list.innerHTML = state.history.map((e, i) => {
+    const prev = state.history[i+1]
+    const diff = prev ? e.score - prev.score : null
+    const deltaCls = diff === null ? '' : diff>0 ? 'up' : diff<0 ? 'down' : 'same'
+    const deltaText = diff === null ? '' : `${diff>0?'+':''}${diff}点`
+    const scoreClass = e.score>=75?'high':e.score>=50?'mid':'low'
+    const d = new Date(e.timestamp).toLocaleDateString('ja-JP', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+    return `
+      <div class="history-card">
+        <div class="history-top">
+          <div class="history-score ${scoreClass}">${e.score}</div>
+          <div class="history-meta">
+            <div class="history-name">${e.frameName}</div>
+            <div class="history-date">${d}</div>
+          </div>
+          ${diff!==null?`<div class="delta-pill ${deltaCls}">${deltaText}</div>`:''}
+        </div>
+        <div class="history-summary">${e.summary}</div>
+      </div>`
+  }).join('')
+
+  $('histBadge').textContent = state.history.length
+  show('histBadge')
+}
+
+// ══════════════════════════════════════════════════════════════
+// COPY MD
+// ══════════════════════════════════════════════════════════════
+function copyMD() {
+  if (!state.reviewData) return
+  const d = state.reviewData
+  let md = `# UX Review — ${state.nodes.map(n=>n.name).join(' + ')}\n\n`
+  md += `**総合スコア: ${d.overallScore}/100**\n\n${d.summary}\n\n---\n\n`
+  state.allComments.forEach(c => {
+    const icon = {critical:'🔴',warning:'⚠️',suggestion:'💡'}[c.severity]
+    md += `### ${icon} ${c.category}\n\n${c.message}\n\n`
+    md += `**根拠:** ${c.evidence}\n`
+    if (c.evidenceUrl) md += `**参考:** ${c.evidenceUrl}\n`
+    md += `\n**改善案:** ${c.suggestion}\n\n---\n\n`
+  })
+  if (d.flowAnalysis) {
+    md += `## フロー分析\n\nスコア: ${d.flowAnalysis.flowScore}/100\n\n${d.flowAnalysis.transitionLogic}\n\n`
+    d.flowAnalysis.continuityIssues?.forEach(i => { md += `- ${i}\n` })
+    md += `\n${d.flowAnalysis.journeyGaps}\n`
+  }
+  parent.postMessage({ pluginMessage: { type: 'copy-text', text: md } }, '*')
+}
+
+// ══════════════════════════════════════════════════════════════
+// ERROR
+// ══════════════════════════════════════════════════════════════
+function showError(msg) {
+  hide('loadingState'); hide('resultContent'); hide('aiQuestions')
+  $('errorMsg').textContent = msg; show('errorState')
+}
+
+// ══════════════════════════════════════════════════════════════
+// EVENTS
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  parent.postMessage({ pluginMessage: { type: 'load-settings' } }, '*')
+
+  // Header
+  $('btnSettings').addEventListener('click', () => $('settingsPanel').classList.toggle('hidden'))
+  $('btnHelp').addEventListener('click', () => show('helpOverlay'))
+  $('helpClose').addEventListener('click', () => hide('helpOverlay'))
+  $('helpOverlay').addEventListener('click', e => { if (e.target === $('helpOverlay')) hide('helpOverlay') })
+  $('btnExpand').addEventListener('click', toggleExpand)
+  $('btnTheme').addEventListener('click', toggleTheme)
+  $('btnSave').addEventListener('click', saveSettings)
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => switchTab(t.dataset.panel))
+  })
+
+  // Run
+  $('btnRun').addEventListener('click', () => {
+    const opts = getOpts()
+    if (opts.bidirectional) { showBidirectionalQuestions() }
+    else { runReview() }
+  })
+  $('btnFlow').addEventListener('click', runFlowAnalysis)
+  $('btnProceed').addEventListener('click', () => {
+    const biAnswers = {
+      goal:       $('aqGoal').value.trim(),
+      kpi:        $('aqKpi').value.trim(),
+      constraint: $('aqConstraint').value.trim(),
+    }
+    runReview(biAnswers)
+  })
+
+  // Filter
+  $('f-all').addEventListener('click', () => setFilter('all'))
+  $('f-critical').addEventListener('click', () => setFilter('critical'))
+  $('f-warning').addEventListener('click', () => setFilter('warning'))
+  $('f-suggestion').addEventListener('click', () => setFilter('suggestion'))
+
+  // Copy
+  $('btnCopyMD').addEventListener('click', copyMD)
+
+  // Chat
+  $('btnSend').addEventListener('click', () => {
+    const v = $('chatInput').value.trim()
+    $('chatInput').value = ''
+    sendChat(v)
+  })
+  $('chatInput').addEventListener('keydown', e => {
+    if ((e.metaKey||e.ctrlKey) && e.key==='Enter') {
+      e.preventDefault(); $('btnSend').click()
+    }
+    // Auto-resize textarea
+    e.target.style.height = 'auto'
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+  })
+  $('chatSuggestions').addEventListener('click', e => {
+    const q = e.target.dataset?.q
+    if (q) { $('chatInput').value = q; $('btnSend').click() }
+  })
+
+  // Cmd+Enter → run review
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey||e.ctrlKey) && e.key==='Enter' && document.activeElement !== $('chatInput')) {
+      e.preventDefault(); $('btnRun').click()
+    }
+    if (e.key==='Escape') {
+      hide('helpOverlay')
+    }
+  })
+})
+</script>
+
+<!-- Help Modal -->
+<div class="help-overlay hidden" id="helpOverlay">
+  <div class="help-modal">
+    <div class="help-header">
+      <span class="help-title">UX Review AI — 使い方ガイド</span>
+      <button class="help-close" id="helpClose">×</button>
+    </div>
+    <div class="help-body">
+
+      <div class="help-section">
+        <div class="help-section-title">基本的な使い方</div>
+        <div class="help-item">
+          <div class="help-item-label">① フレームを選択</div>
+          <div class="help-item-desc">Figmaでレビューしたいフレームをクリックして選択します。選択バーに名前とサイズが表示されれば準備完了です。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">② 評価軸を選ぶ</div>
+          <div class="help-item-desc">分析したい観点のチップをON/OFFします。UX・情報設計・ビジネス要件・実装妥当性・A11Yから選択できます。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">③ レビュー開始</div>
+          <div class="help-item-desc">ボタンをクリックするか ⌘+Enter でAI分析を実行します。スコアと指摘事項が生成されます。</div>
+        </div>
+      </div>
+
+      <div class="help-divider"></div>
+
+      <div class="help-section">
+        <div class="help-section-title">評価軸の説明</div>
+        <div class="help-item">
+          <div class="help-item-label">UX / 人間工学</div>
+          <div class="help-item-desc">Nielsen 10原則・Fitt's Law・Hick's Law などの人間工学的観点から、操作性・認知負荷・エラー防止を評価します。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">情報設計（IA）</div>
+          <div class="help-item-desc">ナビゲーション階層・ラベリング・コンテンツ優先度など、情報の構造とユーザーのメンタルモデルとの整合性を評価します。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">ビジネス要件</div>
+          <div class="help-item-desc">ステークホルダー要件の可視化度、CTA・コンバージョン導線の設計、KPIにつながるタスク完了設計を評価します。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">実装妥当性</div>
+          <div class="help-item-desc">Material Design 3・Apple HIG 準拠、コンポーネント再利用性、スペーシングの一貫性など、エンジニアへの実装依頼として成立するかを評価します。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">A11Y（アクセシビリティ）</div>
+          <div class="help-item-desc">WCAG 2.1 AA 基準に基づきコントラスト比・最小フォントサイズ（12px以上）・タッチターゲットサイズなどを評価します。</div>
+        </div>
+      </div>
+
+      <div class="help-divider"></div>
+
+      <div class="help-section">
+        <div class="help-section-title">高度な機能</div>
+        <div class="help-item">
+          <div class="help-item-label">フロー分析 <span class="badge">複数選択時</span></div>
+          <div class="help-item-desc">Figmaで複数のフレームを選択すると「フロー分析」ボタンが表示されます。画面遷移の論理性・情報の引き継ぎ・ユーザージャーニー全体のギャップを横断的に分析します。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">💬 双方向モード</div>
+          <div class="help-item-desc">レビュー実行前にAIがデザイン文脈を確認する質問を投げます。ユーザーゴール・ビジネスKPI・実装制約を回答することで、ビジネス文脈に沿った深度のある指摘が生成されます。いずれも任意入力です。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">チャット継続</div>
+          <div class="help-item-desc">レビュー後に「チャット」タブへ移動すると、結果に対して自然言語で質問できます。「criticalの問題を詳しく」「エンジニア向けの実装指示書を作成して」などに対応します。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">履歴・スコア比較</div>
+          <div class="help-item-desc">「履歴」タブに過去のレビュー結果が自動保存されます。同じフレームを再レビューすると、前回からのスコア変化（+○点）がスコアカードに表示されます。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">Markdown コピー</div>
+          <div class="help-item-desc">レビュー結果をMarkdown形式でクリップボードにコピーします。エビデンスURLも含まれるため、NotionやConfluenceにそのまま貼り付けて共有できます。</div>
+        </div>
+      </div>
+
+      <div class="help-divider"></div>
+
+      <div class="help-section">
+        <div class="help-section-title">指摘の重要度</div>
+        <div class="help-item">
+          <div class="help-item-label"><span style="color:#ff7a64">CRITICAL</span></div>
+          <div class="help-item-desc">ユーザーのタスク完了やビジネス目標を阻害する重大な問題です。優先的に対処することを推奨します。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label"><span style="color:#f5d142">WARNING</span></div>
+          <div class="help-item-desc">改善により体験・成果が向上する問題です。スプリントの中で対処を検討してください。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label"><span style="color:#4de8a0">HINT</span></div>
+          <div class="help-item-desc">良い点の確認、または長期的な改善候補です。現状を維持しつつ今後の設計指針として参照してください。</div>
+        </div>
+      </div>
+
+      <div class="help-divider"></div>
+
+      <div class="help-section">
+        <div class="help-section-title">モデル選択</div>
+        <div class="help-item">
+          <div class="help-item-label">gpt-5.4-nano <span class="badge">デフォルト</span></div>
+          <div class="help-item-desc">高速・低コスト。分類・抽出・レビューなど日常的なタスクに最適。ほとんどのレビューはnanoで十分な品質が得られます。</div>
+        </div>
+        <div class="help-item">
+          <div class="help-item-label">gpt-5.4-mini</div>
+          <div class="help-item-desc">nanoより高精度・推論強化版。複数フレームのフロー分析や複雑なビジネス要件の評価に使用するとより深い指摘が得られます。nanoの約2倍のコスト。</div>
+        </div>
+      </div>
+
+      <div class="help-divider"></div>
+
+      <div class="help-section">
+        <div class="help-section-title">ショートカット</div>
+        <div class="help-shortcut-row">
+          <span class="help-shortcut-label">レビュー開始</span>
+          <span class="help-shortcut-key">⌘ + Enter</span>
+        </div>
+        <div class="help-shortcut-row">
+          <span class="help-shortcut-label">チャット送信</span>
+          <span class="help-shortcut-key">⌘ + Enter</span>
+        </div>
+        <div class="help-shortcut-row">
+          <span class="help-shortcut-label">拡大表示切替</span>
+          <span class="help-shortcut-key">ヘッダー ⤢ ボタン</span>
+        </div>
+        <div class="help-shortcut-row">
+          <span class="help-shortcut-label">モーダルを閉じる</span>
+          <span class="help-shortcut-key">Esc</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
