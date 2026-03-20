@@ -100,7 +100,7 @@ function createVars(collections) {
     var c = figma.variables.createVariableCollection(col.collection);
     ids.collections.push(c.id);
     pluginCreatedCollections.push(c.id);
-    var mode = c.modes[0].id;
+    var mode = c.modes[0].modeId || c.modes[0].id;
     for (var j = 0; j < col.variables.length; j++) {
       var vd = col.variables[j];
       var typ = vd.type === "COLOR" ? "COLOR" : "FLOAT";
@@ -287,7 +287,7 @@ function importTokens(jsonStr) {
     var coll = figma.variables.createVariableCollection(gname);
     ids.collections.push(coll.id);
     pluginCreatedCollections.push(coll.id);
-    var modeId = coll.modes[0].id;
+    var modeId = coll.modes[0].modeId || coll.modes[0].id;
 
     for (var j = 0; j < items.length; j++) {
       var tk = items[j];
