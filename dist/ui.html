@@ -4,395 +4,565 @@
 <meta charset="UTF-8">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
-  --bg: #18181b;
-  --surface: rgba(255,255,255,0.06);
-  --border: rgba(255,255,255,0.10);
-  --border-hi: rgba(255,255,255,0.18);
-  --text: rgba(255,255,255,0.92);
-  --text-sub: rgba(255,255,255,0.50);
-  --text-dim: rgba(255,255,255,0.28);
-  --accent: #818cf8;
-  --accent-bg: rgba(129,140,248,0.12);
-  --green: #4ade80;
-  --red: #f87171;
+  --bg: #18181b; --surface: rgba(255,255,255,0.06); --border: rgba(255,255,255,0.10);
+  --border-hi: rgba(255,255,255,0.18); --text: rgba(255,255,255,0.92);
+  --text-sub: rgba(255,255,255,0.50); --text-dim: rgba(255,255,255,0.28);
+  --accent: #818cf8; --accent-bg: rgba(129,140,248,0.12);
+  --green: #4ade80; --red: #f87171; --yellow: #fbbf24;
 }
-
 html, body {
-  font-family: -apple-system, 'Helvetica Neue', 'Noto Sans JP', sans-serif;
-  font-size: 14px; line-height: 1.5;
-  background: var(--bg); color: var(--text);
-  width: 100%; height: 100%; overflow: hidden;
-  -webkit-font-smoothing: antialiased;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 14px; line-height: 1.5; background: var(--bg); color: var(--text);
+  width: 100%; height: 100%; overflow: hidden; -webkit-font-smoothing: antialiased;
 }
-
-.layout {
-  display: flex; flex-direction: column; height: 100vh;
-}
+.layout { display: flex; flex-direction: column; height: 100vh; }
 
 /* ── Header ── */
-.header {
-  padding: 10px 16px; border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-  flex-shrink: 0;
-}
-.logo { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.header { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.logo { font-size: 14px; font-weight: 600; }
 .logo span { color: var(--accent); }
-.icon-btn {
-  width: 30px; height: 30px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 6px; cursor: pointer; color: var(--text-sub);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; transition: all 0.12s;
-}
+.icon-btn { width: 30px; height: 30px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; color: var(--text-sub); display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.12s; }
 .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ── Settings ── */
-.settings {
-  padding: 10px 16px; border-bottom: 1px solid var(--border);
-  display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
-}
+.settings { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
 .settings.hidden { display: none; }
 .s-row { display: flex; gap: 8px; align-items: center; }
 .s-label { font-size: 12px; color: var(--text-dim); width: 56px; flex-shrink: 0; }
-.s-input {
-  flex: 1; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 6px; padding: 6px 10px; font-size: 13px; color: var(--text);
-  outline: none; font-family: monospace; min-width: 0;
-}
+.s-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; color: var(--text); outline: none; font-family: monospace; min-width: 0; }
 .s-input:focus { border-color: var(--accent); }
-.s-select {
-  flex: 1; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 6px; padding: 6px 10px; font-size: 13px; color: var(--text); outline: none;
-}
+.s-select { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; color: var(--text); outline: none; }
+.btn-test { padding: 6px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text-sub); cursor: pointer; transition: all 0.12s; font-family: inherit; }
+.btn-test:hover { border-color: var(--accent); color: var(--accent); }
+.btn-test:disabled { opacity: 0.4; cursor: not-allowed; }
+.test-result { font-size: 11px; font-family: monospace; line-height: 1.4; word-break: break-word; max-height: 48px; overflow-y: auto; flex: 1; min-width: 0; }
+.test-result.ok { color: var(--green); }
+.test-result.error { color: var(--red); }
 
 /* ── Main ── */
-.main {
-  flex: 1; display: flex; flex-direction: column;
-  padding: 14px 16px; gap: 10px; overflow: hidden;
-}
-
-.prompt {
-  width: 100%; min-height: 72px; max-height: 160px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px 12px;
-  font-size: 14px; color: var(--text); outline: none;
-  resize: none; font-family: inherit; line-height: 1.6;
-  transition: border-color 0.12s;
-}
+.main { flex: 1; display: flex; flex-direction: column; padding: 12px 16px 0; min-height: 0; overflow: hidden; }
+.prompt { width: 100%; flex: 1; min-height: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 14px; color: var(--text); outline: none; resize: none; font-family: inherit; line-height: 1.6; transition: border-color 0.12s; }
 .prompt:focus { border-color: var(--accent); }
 .prompt::placeholder { color: var(--text-dim); }
 
-.btn-run {
-  padding: 10px; background: var(--accent); color: #111;
-  border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
-  cursor: pointer; transition: opacity 0.12s; flex-shrink: 0;
-}
-.btn-run:hover { opacity: 0.88; }
-.btn-run:disabled { opacity: 0.35; cursor: not-allowed; }
-
-.status {
-  font-size: 12px; color: var(--text-sub); text-align: center;
-  padding: 6px 0; flex-shrink: 0;
-}
-.spinner {
-  display: inline-block; width: 12px; height: 12px;
-  border: 2px solid var(--border); border-top-color: var(--accent);
-  border-radius: 50%; animation: spin 0.6s linear infinite;
-  vertical-align: middle; margin-right: 6px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+/* ── Preview ── */
+.preview { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.preview::-webkit-scrollbar { width: 4px; }
+.preview::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+.pv-header { font-size: 13px; color: var(--text); padding: 4px 0; }
+.pv-desc { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+.pv-section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.pv-title { font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 6px; letter-spacing: 0.03em; }
+.pv-item { font-size: 12px; color: var(--text-sub); line-height: 1.8; display: flex; align-items: center; gap: 6px; }
+.pv-color { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.12); flex-shrink: 0; }
+.pv-variant { font-size: 12px; color: var(--text-sub); padding: 2px 8px; background: rgba(255,255,255,0.04); border-radius: 4px; margin: 2px 0; display: flex; align-items: center; gap: 6px; }
 
 /* ── Log ── */
-.log {
-  flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
-}
+.log { max-height: 80px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; flex-shrink: 0; }
+.log:empty { display: none; }
 .log::-webkit-scrollbar { width: 4px; }
 .log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-
-.log-item {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.6;
-  animation: fadeIn 0.15s ease;
-}
+.log-item { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; line-height: 1.5; animation: fadeIn 0.15s ease; }
 .log-item.error { border-color: rgba(248,113,113,0.25); color: var(--red); }
-.log-item.ok    { border-color: rgba(74,222,128,0.25); color: var(--green); }
-.log-time { font-size: 11px; color: var(--text-dim); margin-bottom: 3px; font-family: monospace; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+.log-item.ok { border-color: rgba(74,222,128,0.25); color: var(--green); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; } }
 
-.empty {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  color: var(--text-dim); font-size: 13px; text-align: center; line-height: 2;
-}
+/* ── Bottom bar ── */
+.bottom-bar { padding: 10px 16px 14px; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); }
+.status { font-size: 12px; color: var(--text-sub); text-align: center; }
+.spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.shortcut {
-  font-size: 11px; color: var(--text-dim); font-family: monospace;
-  text-align: center; flex-shrink: 0;
-}
+.btn-row { display: flex; gap: 8px; }
+.btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.12s; font-family: inherit; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #111; }
+.btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.btn-secondary { background: var(--surface); color: var(--text-sub); border: 1px solid var(--border); }
+.btn-secondary:hover:not(:disabled) { border-color: var(--border-hi); color: var(--text); }
+.btn-danger { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+.btn-danger:hover:not(:disabled) { border-color: var(--red); }
 
+.shortcut { font-size: 11px; color: var(--text-dim); font-family: monospace; text-align: center; }
 .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
 <div class="layout">
-
   <div class="header">
     <span class="logo">AI <span>UI</span> Generator</span>
     <button class="icon-btn" id="btnSettings" title="設定">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-        <path d="M5.7 1h2.6l.4 1.6a4.5 4.5 0 011.1.6l1.6-.5 1.3 2.2-1.2 1.1a4.6 4.6 0 010 1.2l1.2 1.1-1.3 2.2-1.6-.5a4.5 4.5 0 01-1.1.6L8.3 13H5.7l-.4-1.6a4.5 4.5 0 01-1.1-.6l-1.6.5-1.3-2.2 1.2-1.1a4.6 4.6 0 010-1.2L1.3 5.7l1.3-2.2 1.6.5a4.5 4.5 0 011.1-.6L5.7 1z" stroke="currentColor" stroke-width="1.2"/>
-        <circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/>
-      </svg>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.7 1h2.6l.4 1.6a4.5 4.5 0 011.1.6l1.6-.5 1.3 2.2-1.2 1.1a4.6 4.6 0 010 1.2l1.2 1.1-1.3 2.2-1.6-.5a4.5 4.5 0 01-1.1.6L8.3 13H5.7l-.4-1.6a4.5 4.5 0 01-1.1-.6l-1.6.5-1.3-2.2 1.2-1.1a4.6 4.6 0 010-1.2L1.3 5.7l1.3-2.2 1.6.5a4.5 4.5 0 011.1-.6L5.7 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/></svg>
     </button>
   </div>
 
   <div class="settings hidden" id="settings">
     <div class="s-row">
-      <span class="s-label">Provider</span>
-      <select class="s-select" id="provider">
-        <option value="gemini">Gemini 2.0 Flash（無料）</option>
-        <option value="openai">GPT-4o-mini</option>
+      <span class="s-label">Model</span>
+      <select class="s-select" id="modelSelect">
+        <option value="gemini-2.5-flash">Gemini 2.5 Flash（無料）</option>
+        <option value="gpt-5.4-nano">gpt-5.4-nano（高速）</option>
+        <option value="gpt-5.4-mini">gpt-5.4-mini（高精度）</option>
       </select>
     </div>
     <div class="s-row">
       <span class="s-label">API Key</span>
       <input class="s-input" id="apiKey" type="password" placeholder="APIキーを入力..." />
     </div>
+    <div class="s-row">
+      <button class="btn-test" id="btnTest">接続テスト</button>
+      <span class="test-result hidden" id="testResult"></span>
+    </div>
   </div>
 
   <div class="main">
-    <textarea class="prompt" id="prompt" placeholder="作りたいUIを自然言語で記述...&#10;例: シンプルなログインフォーム&#10;例: 商品一覧カード 3列グリッド"></textarea>
-    <button class="btn-run" id="btnRun">生成 →</button>
-    <div class="status hidden" id="status"><span class="spinner"></span>AIがUIを生成中...</div>
-    <div class="log" id="log">
-      <div class="empty" id="empty">テキストで記述 → Figmaキャンバスに生成<br>⌘+Enter で実行</div>
-    </div>
-    <div class="shortcut">⌘ + Enter</div>
+    <textarea class="prompt" id="prompt" placeholder="作りたいUIを自然言語で記述...&#10;&#10;例: ボタンのバリアントセット（Primary/Secondary/Destructive × S/M/L）&#10;例: カード一覧画面（作成前/作成後の2状態）&#10;例: SaaS向けカラー・スペーシングのデザイントークン"></textarea>
+    <div class="preview hidden" id="preview"></div>
+    <div class="log" id="log"></div>
   </div>
 
+  <div class="bottom-bar">
+    <div class="status hidden" id="status"><span class="spinner"></span>AIが構造を生成中...</div>
+    <div class="btn-row" id="actInput">
+      <button class="btn btn-primary" id="btnRun">生成 →</button>
+    </div>
+    <div class="btn-row hidden" id="actPreview">
+      <button class="btn btn-secondary" id="btnCancel">キャンセル</button>
+      <button class="btn btn-primary" id="btnConfirm">確定して生成</button>
+    </div>
+    <div class="btn-row hidden" id="actUndo">
+      <button class="btn btn-secondary" id="btnUndo">↩ 元に戻す</button>
+      <button class="btn btn-danger" id="btnUndoAll">全削除</button>
+    </div>
+    <div class="shortcut" id="shortcutHint">⌘ + Enter</div>
+  </div>
 </div>
 
 <script>
 // ══════════════════════════════════════════════════════════════
-// STATE & DOM
+// DOM
 // ══════════════════════════════════════════════════════════════
-const $ = id => document.getElementById(id)
-const show = el => el.classList.remove('hidden')
-const hide = el => el.classList.add('hidden')
+var $ = function(id) { return document.getElementById(id) }
+function show(el) { if (el) el.classList.remove('hidden') }
+function hide(el) { if (el) el.classList.add('hidden') }
+function isGemini(m) { return m.indexOf('gemini') === 0 }
 
-// ── 設定 ──
-$('btnSettings').addEventListener('click', () => $('settings').classList.toggle('hidden'))
+var currentSpec = null
 
+// ══════════════════════════════════════════════════════════════
+// 設定
+// ══════════════════════════════════════════════════════════════
 parent.postMessage({ pluginMessage: { type: 'load-settings' } }, '*')
 
-window.onmessage = ({ data }) => {
-  const msg = data.pluginMessage
-  if (!msg) return
-
-  if (msg.type === 'settings-loaded') {
-    if (msg.apiKey) $('apiKey').value = msg.apiKey
-    if (msg.provider) $('provider').value = msg.provider
-    if (msg.apiKey) hide($('settings'))
-  }
-
-  if (msg.type === 'done') {
-    hide($('status'))
-    $('btnRun').disabled = false
-    addLog('ok', '✓ Figmaキャンバスに生成しました')
-  }
-
-  if (msg.type === 'error') {
-    hide($('status'))
-    $('btnRun').disabled = false
-    addLog('error', msg.error)
-  }
-}
-
+$('btnSettings').addEventListener('click', function() { $('settings').classList.toggle('hidden') })
 $('apiKey').addEventListener('change', saveSettings)
-$('provider').addEventListener('change', saveSettings)
+$('modelSelect').addEventListener('change', saveSettings)
 
 function saveSettings() {
   parent.postMessage({ pluginMessage: {
     type: 'save-settings',
     apiKey: $('apiKey').value.trim(),
-    provider: $('provider').value,
+    model: $('modelSelect').value,
   }}, '*')
 }
 
-// ══════════════════════════════════════════════════════════════
-// AI SYSTEM PROMPT
-// ══════════════════════════════════════════════════════════════
-const SYSTEM_PROMPT = `あなたはUIデザイナーです。ユーザーの自然言語の説明から、Figmaノード構造をJSONで生成してください。
+// 接続テスト
+$('btnTest').addEventListener('click', function() {
+  var apiKey = $('apiKey').value.trim()
+  var model = $('modelSelect').value
+  var result = $('testResult')
 
-出力形式（JSONのみ。マークダウン記号・前置き・後置き一切不要）:
-{
-  "name": "フレーム名",
-  "width": 数値,
-  "height": 数値,
-  "background": "#hex",
-  "children": [
-    {
-      "type": "RECT",
-      "name": "名前",
-      "width": 数値, "height": 数値,
-      "x": 数値, "y": 数値,
-      "fill": "#hex",
-      "cornerRadius": 数値,
-      "stroke": "#hex",
-      "strokeWidth": 数値
-    },
-    {
-      "type": "TEXT",
-      "name": "名前",
-      "text": "表示テキスト",
-      "fontSize": 数値,
-      "fontWeight": "Regular|Medium|SemiBold|Bold",
-      "color": "#hex",
-      "x": 数値, "y": 数値
-    },
-    {
-      "type": "FRAME",
-      "name": "名前",
-      "width": 数値, "height": 数値,
-      "x": 数値, "y": 数値,
-      "fill": "#hex",
-      "cornerRadius": 数値,
-      "children": [...]
-    },
-    {
-      "type": "ELLIPSE",
-      "name": "名前",
-      "width": 数値, "height": 数値,
-      "x": 数値, "y": 数値,
-      "fill": "#hex"
+  if (!apiKey) { result.className = 'test-result error'; result.textContent = '✗ APIキーが未入力'; show(result); return }
+
+  $('btnTest').disabled = true
+  result.className = 'test-result'; result.textContent = '接続中...'; show(result)
+
+  var p
+  if (isGemini(model)) {
+    p = fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: 'Hi' }] }], generationConfig: { max_output_tokens: 5 } })
+    })
+  } else {
+    p = fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model: model, messages: [{ role: 'user', content: 'Hi' }], max_completion_tokens: 5 })
+    })
+  }
+
+  p.then(function(res) {
+    if (res.ok) {
+      result.className = 'test-result ok'; result.textContent = '✓ ' + model + ' 接続OK'; saveSettings()
+    } else {
+      return res.json().then(function(err) {
+        result.className = 'test-result error'
+        result.textContent = '✗ ' + ((err.error && err.error.message) || ('HTTP ' + res.status))
+      }).catch(function() {
+        result.className = 'test-result error'; result.textContent = '✗ HTTP ' + res.status
+      })
     }
-  ]
+  }).catch(function(e) {
+    result.className = 'test-result error'; result.textContent = '✗ ' + e.message
+  }).then(function() { $('btnTest').disabled = false })
+})
+
+// ══════════════════════════════════════════════════════════════
+// メッセージ受信
+// ══════════════════════════════════════════════════════════════
+window.onmessage = function(event) {
+  var msg = event.data.pluginMessage
+  if (!msg) return
+
+  if (msg.type === 'settings-loaded') {
+    if (msg.apiKey) $('apiKey').value = msg.apiKey
+    if (msg.model) $('modelSelect').value = msg.model
+    if (msg.apiKey) hide($('settings'))
+  }
+
+  if (msg.type === 'done') {
+    hide($('status'))
+    setState('input')
+    addLog('ok', '✓ ' + (msg.summary || '生成完了'))
+    if (msg.undoCount > 0) show($('actUndo'))
+  }
+
+  if (msg.type === 'error') {
+    hide($('status'))
+    setState('input')
+    addLog('error', msg.error)
+  }
+
+  if (msg.type === 'undo-done') {
+    if (msg.undoCount > 0) { show($('actUndo')) } else { hide($('actUndo')) }
+    addLog('ok', '↩ 元に戻しました')
+  }
 }
 
-設計原則:
-- モダンでクリーンなUI。適切な余白（padding 16-32px）
-- フォントサイズ: タイトル 24-32, 本文 14-16, キャプション 12
-- 一貫した配色パレット
-- 日本語テキストを使用
-- 典型的な画面幅: モバイル 390, デスクトップ 1440
-- ボタンは高さ 44px以上、角丸 8px
-- 入力フィールドは背景色で領域を明示`
+// ══════════════════════════════════════════════════════════════
+// 状態管理
+// ══════════════════════════════════════════════════════════════
+function setState(state) {
+  var isInput = state === 'input'
+  var isLoading = state === 'loading'
+  var isPreview = state === 'preview'
+
+  if (isInput || isLoading) { show($('prompt')); hide($('preview')) }
+  if (isPreview) { hide($('prompt')); show($('preview')) }
+
+  $('prompt').disabled = isLoading
+  $('btnRun').disabled = isLoading
+
+  if (isInput) { show($('actInput')); hide($('actPreview')) }
+  if (isLoading) { show($('actInput')); hide($('actPreview')) }
+  if (isPreview) { hide($('actInput')); show($('actPreview')) }
+
+  if (isLoading) { show($('status')) } else { hide($('status')) }
+  if (isInput) { show($('shortcutHint')) } else { hide($('shortcutHint')) }
+}
 
 // ══════════════════════════════════════════════════════════════
-// AI API CALL
+// システムプロンプト
 // ══════════════════════════════════════════════════════════════
-async function callAI(prompt) {
-  const provider = $('provider').value
-  const apiKey = $('apiKey').value.trim()
-  if (!apiKey) throw new Error('APIキーを設定してください（⚙）')
+var SYSTEM_PROMPT = [
+'あなたはMaterial Design 3ガイドラインに精通したシニアUIデザイナーです。',
+'Figma上で直接生成可能なJSON構造を出力してください。',
+'',
+'━━━ 出力形式（JSONのみ。前置き・コードブロック不要）━━━',
+'{',
+'  "name": "名前",',
+'  "description": "概要",',
+'  "variables": [{ "collection": "名前", "variables": [{ "name": "token/name", "type": "COLOR|FLOAT", "value": "#hex|数値" }] }],',
+'  "components": [{ "name": "Button", "variants": [{ "props": {"Style":"Primary","Size":"Medium"}, "fill": "#hex", "stroke": "#hex", "strokeWidth": 1, "textColor": "#hex", "label": "テキスト", "fontSize": 14, "fontWeight": "Regular|Medium|SemiBold|Bold", "paddingX": 16, "paddingY": 10, "cornerRadius": 8, "opacity": 1.0 }] }],',
+'  "frames": [{ "name": "画面名", "type": "FRAME", "width": 390, "height": 844, "fill": "#FFFFFF", "layoutMode": "VERTICAL", "padding": 24, "itemSpacing": 16, "counterAxisSizingMode": "FIXED", "children": [...] }]',
+'}',
+'',
+'━━━ Material Design 3 デザイントークン（必ず準拠）━━━',
+'',
+'■ カラーシステム（Light Theme基準）:',
+'Primary: #2563EB  OnPrimary: #FFFFFF  PrimaryContainer: #DBEAFE',
+'Secondary: #64748B  OnSecondary: #FFFFFF  SecondaryContainer: #F1F5F9',
+'Tertiary: #0D9488  TertiaryContainer: #CCFBF1',
+'Error: #DC2626  ErrorContainer: #FEE2E2',
+'Surface: #FFFFFF  SurfaceVariant: #F1F5F9  SurfaceDim: #F8FAFC',
+'OnSurface: #0F172A  OnSurfaceVariant: #475569',
+'Outline: #CBD5E1  OutlineVariant: #E2E8F0',
+'Success: #16A34A  Warning: #D97706  Info: #2563EB',
+'',
+'■ タイポグラフィスケール:',
+'Display Large: 57px Bold  Display Medium: 45px Bold  Display Small: 36px Bold',
+'Headline Large: 32px Bold  Headline Medium: 28px SemiBold  Headline Small: 24px SemiBold',
+'Title Large: 22px SemiBold  Title Medium: 16px SemiBold  Title Small: 14px SemiBold',
+'Body Large: 16px Regular  Body Medium: 14px Regular  Body Small: 12px Regular',
+'Label Large: 14px Medium  Label Medium: 12px Medium  Label Small: 11px Medium',
+'',
+'■ スペーシングシステム（4dpグリッド厳守）:',
+'4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64',
+'コンポーネント内padding: 12-24  セクション間gap: 16-32  画面padding: 16-24',
+'',
+'■ エレベーション（影はFigmaでは色の明暗で表現）:',
+'Level 0: Surface #FFFFFF  Level 1: #F8FAFC  Level 2: #F1F5F9  Level 3: #E2E8F0',
+'',
+'■ 角丸（Corner Radius）:',
+'None: 0  ExtraSmall: 4  Small: 8  Medium: 12  Large: 16  ExtraLarge: 28  Full: 9999',
+'',
+'■ コンポーネント仕様:',
+'Button Filled: height 40-48, paddingX 24, paddingY 12, radius 20(Full), fontSize 14 Medium',
+'Button Outlined: height 40-48, stroke 1px Outline, fill transparent, radius 20',
+'Button Text: paddingX 12, fill transparent, fontSize 14 Medium',
+'Text Field: height 56, paddingX 16, radius 4(top), border-bottom 2px',
+'Card Filled: paddingX 16, paddingY 16, radius 12, fill SurfaceVariant',
+'Card Outlined: paddingX 16, paddingY 16, radius 12, stroke 1px Outline',
+'Top App Bar: height 64, paddingX 16',
+'Navigation Bar: height 80',
+'FAB: 56x56, radius 16, fill PrimaryContainer',
+'Chip: height 32, paddingX 16, radius 8',
+'Switch: width 52, height 32',
+'',
+'━━━ framesのchildren構造 ━━━',
+'TEXT: { "type":"TEXT", "text":"...", "fontSize":14, "fontWeight":"Regular|Medium|SemiBold|Bold", "color":"#hex", "fillWidth":true }',
+'RECT: { "type":"RECT", "width":数値, "height":数値, "fill":"#hex", "cornerRadius":数値, "fillWidth":true }',
+'ELLIPSE: { "type":"ELLIPSE", "width":40, "height":40, "fill":"#hex" }',
+'FRAME: { "type":"FRAME", "name":"意味ある名前", "layoutMode":"VERTICAL|HORIZONTAL", "padding":16, "paddingX":16, "paddingY":12, "itemSpacing":8, "fill":"#hex", "cornerRadius":12, "fillWidth":true, "counterAxisAlignItems":"CENTER", "children":[...] }',
+'',
+'━━━ デザイン品質ルール（厳守）━━━',
+'',
+'【構造】',
+'- すべてのコンテナはAuto Layout（layoutMode）必須。絶対座標配置は禁止',
+'- fillWidth:trueで親の幅いっぱいに伸びる。テキストやカードは基本fillWidth:true',
+'- FRAMEは必ず意味のあるname（"Header", "Card_ProjectA", "Button_Primary"等）を付ける',
+'- 深さ3-5階層のネスト構造（Screen > Section > Card > ContentRow > TextGroup）',
+'',
+'【カード・リストアイテム構造の例】:',
+'{ "type":"FRAME", "name":"Card", "layoutMode":"HORIZONTAL", "padding":16, "itemSpacing":16, "fill":"#F8FAFC", "cornerRadius":12, "fillWidth":true, "children":[',
+'  { "type":"ELLIPSE", "name":"Avatar", "width":48, "height":48, "fill":"#DBEAFE" },',
+'  { "type":"FRAME", "name":"Content", "layoutMode":"VERTICAL", "itemSpacing":4, "fillWidth":true, "children":[',
+'    { "type":"TEXT", "name":"Title", "text":"プロジェクトA", "fontSize":16, "fontWeight":"SemiBold", "color":"#0F172A" },',
+'    { "type":"TEXT", "name":"Description", "text":"進行中のタスク", "fontSize":14, "color":"#475569" },',
+'    { "type":"TEXT", "name":"Meta", "text":"最終更新: 2時間前", "fontSize":12, "color":"#94A3B8" }',
+'  ]}',
+']}',
+'',
+'【ボタン構造の例】:',
+'Filled: { "type":"FRAME", "name":"Button_Primary", "layoutMode":"HORIZONTAL", "paddingX":24, "paddingY":12, "fill":"#2563EB", "cornerRadius":20, "counterAxisAlignItems":"CENTER", "primaryAxisAlignItems":"CENTER", "children":[',
+'  { "type":"TEXT", "text":"作成する", "fontSize":14, "fontWeight":"Medium", "color":"#FFFFFF" }',
+']}',
+'Outlined: { "type":"FRAME", "name":"Button_Secondary", "layoutMode":"HORIZONTAL", "paddingX":24, "paddingY":12, "fill":"transparent", "stroke":"#CBD5E1", "strokeWidth":1, "cornerRadius":20, "children":[',
+'  { "type":"TEXT", "text":"キャンセル", "fontSize":14, "fontWeight":"Medium", "color":"#2563EB" }',
+']}',
+'',
+'【インプットフィールド構造】:',
+'{ "type":"FRAME", "name":"TextField", "layoutMode":"VERTICAL", "itemSpacing":8, "fillWidth":true, "children":[',
+'  { "type":"TEXT", "name":"Label", "text":"メールアドレス", "fontSize":12, "fontWeight":"Medium", "color":"#475569" },',
+'  { "type":"FRAME", "name":"Input", "layoutMode":"HORIZONTAL", "paddingX":16, "paddingY":14, "fill":"#F8FAFC", "cornerRadius":8, "stroke":"#E2E8F0", "strokeWidth":1, "fillWidth":true, "children":[',
+'    { "type":"TEXT", "text":"example@email.com", "fontSize":14, "color":"#94A3B8" }',
+'  ]}',
+']}',
+'',
+'【色彩とコントラスト】',
+'- 本文テキスト: #0F172A（OnSurface）。#94A3B8より薄い色を本文に使用禁止',
+'- サブテキスト: #475569以上の濃さ。キャプション/メタ情報のみ #94A3B8許容',
+'- WCAG AA準拠: 通常テキスト4.5:1、大文字テキスト3:1のコントラスト比',
+'- 背景の階層: Surface #FFF > SurfaceDim #F8FAFC > SurfaceVariant #F1F5F9',
+'- アクセントカラーは全体の10-15%に抑える。大面積にPrimaryを使わない',
+'',
+'【スペーシング】',
+'- 4dpグリッド厳守。奇数値・5の倍数（15, 25等）禁止',
+'- セクション間: 24-32px  関連要素間: 8-16px  密接な要素間: 4-8px',
+'- 画面の左右padding: 16px（モバイル）24px（タブレット以上）',
+'- カード内padding: 16px  ボタン内paddingX: 24px paddingY: 12px',
+'',
+'【マルチステート（Before/After）】',
+'- インタラクション指示がある場合: 2フレーム以上を必ず生成',
+'- Frame名: "画面名 - Default", "画面名 - After Action" 等の状態を明示',
+'- Before/After間で変化した要素を明確に（新しいカードの追加、モーダル表示等）',
+'- 追加された要素はPrimaryContainerの背景色で視覚的にハイライト',
+'',
+'【アイコン表現】',
+'- アイコンはELLIPSEまたはRECTで抽象的に表現（24x24または20x20）',
+'- アイコンプレースホルダー: 背景色付きELLIPSE + FRAMEで48x48の領域を確保',
+'- 絵文字をアイコンとして使用禁止',
+'',
+'【やってはいけないこと】',
+'- paddingやitemSpacingに0を設定（最低4px）',
+'- すべてのテキストを同じfontSize/colorにする（階層をつける）',
+'- cornerRadiusなしの角張ったカード',
+'- fillもstrokeもないFRAME（最低限strokeかfillで領域を明示）',
+'- 1つのフレームに10個以上のchildren直置き（グループ化する）',
+].join('\n')
 
-  let content
+// ══════════════════════════════════════════════════════════════
+// AI API呼び出し
+// ══════════════════════════════════════════════════════════════
+function callAI(prompt) {
+  var model = $('modelSelect').value
+  var apiKey = $('apiKey').value.trim()
+  if (!apiKey) return Promise.reject(new Error('APIキーを設定してください（⚙）'))
 
-  if (provider === 'gemini') {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+  var p
+  if (isGemini(model)) {
+    p = fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          response_mime_type: 'application/json',
-          temperature: 0.7,
-        },
-      }),
+        generationConfig: { response_mime_type: 'application/json', temperature: 0.7 },
+      })
+    }).then(function(res) {
+      if (!res.ok) return res.json().then(function(e) { throw new Error((e.error && e.error.message) || 'Gemini API エラー') })
+      return res.json()
+    }).then(function(data) {
+      return data.candidates[0].content.parts[0].text
     })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.error?.message || `Gemini API エラー [${res.status}]`)
-    }
-    const data = await res.json()
-    content = data.candidates?.[0]?.content?.parts?.[0]?.text
   } else {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    p = fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: prompt },
-        ],
+        model: model,
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
-        temperature: 0.7,
-        max_tokens: 4000,
-      }),
+        max_completion_tokens: 8000,
+      })
+    }).then(function(res) {
+      if (!res.ok) return res.json().then(function(e) { throw new Error((e.error && e.error.message) || 'OpenAI API エラー') })
+      return res.json()
+    }).then(function(data) {
+      return data.choices[0].message.content
     })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.error?.message || `OpenAI API エラー [${res.status}]`)
+  }
+
+  return p.then(function(content) {
+    if (!content) throw new Error('AIからの応答が空でした')
+    try { return JSON.parse(content) } catch(e) {
+      var m = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+      if (m) return JSON.parse(m[1])
+      throw new Error('JSONの解析に失敗')
     }
-    const data = await res.json()
-    content = data.choices?.[0]?.message?.content
-  }
-
-  if (!content) throw new Error('AIからの応答が空でした')
-
-  try {
-    return JSON.parse(content)
-  } catch {
-    const m = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
-    if (m) return JSON.parse(m[1])
-    throw new Error('JSONの解析に失敗しました')
-  }
+  })
 }
 
 // ══════════════════════════════════════════════════════════════
-// GENERATE
+// プレビュー描画
 // ══════════════════════════════════════════════════════════════
-async function generate() {
-  const prompt = $('prompt').value.trim()
+function renderPreview(spec) {
+  var html = '<div class="pv-header"><strong>' + (spec.name || 'Design System') + '</strong></div>'
+  if (spec.description) html += '<div class="pv-desc">' + spec.description + '</div>'
+
+  // Variables
+  if (spec.variables && spec.variables.length) {
+    for (var i = 0; i < spec.variables.length; i++) {
+      var col = spec.variables[i]
+      html += '<div class="pv-section"><div class="pv-title">📦 ' + col.collection + ' (' + col.variables.length + ')</div>'
+      for (var j = 0; j < col.variables.length; j++) {
+        var vr = col.variables[j]
+        if (vr.type === 'COLOR') {
+          html += '<div class="pv-item"><span class="pv-color" style="background:' + vr.value + '"></span>' + vr.name + '</div>'
+        } else {
+          html += '<div class="pv-item">' + vr.name + ': ' + vr.value + '</div>'
+        }
+      }
+      html += '</div>'
+    }
+  }
+
+  // Components
+  if (spec.components && spec.components.length) {
+    for (var i = 0; i < spec.components.length; i++) {
+      var comp = spec.components[i]
+      html += '<div class="pv-section"><div class="pv-title">🧩 ' + comp.name + ' (' + comp.variants.length + ' variants)</div>'
+      for (var j = 0; j < comp.variants.length; j++) {
+        var vr = comp.variants[j]
+        var props = Object.keys(vr.props).map(function(k) { return k + '=' + vr.props[k] }).join(', ')
+        var dot = (vr.fill && vr.fill !== 'transparent') ? '<span class="pv-color" style="background:' + vr.fill + '"></span>' : ''
+        html += '<div class="pv-variant">' + dot + props + '</div>'
+      }
+      html += '</div>'
+    }
+  }
+
+  // Frames
+  if (spec.frames && spec.frames.length) {
+    for (var i = 0; i < spec.frames.length; i++) {
+      var fr = spec.frames[i]
+      var childCount = (fr.children && fr.children.length) || 0
+      html += '<div class="pv-section"><div class="pv-title">📱 ' + (fr.name || 'Frame') + ' (' + (fr.width || '?') + '×' + (fr.height || '?') + ')</div>'
+      html += '<div class="pv-item">' + childCount + ' children, ' + (fr.layoutMode || 'absolute') + '</div>'
+      html += '</div>'
+    }
+  }
+
+  $('preview').innerHTML = html
+}
+
+// ══════════════════════════════════════════════════════════════
+// アクション
+// ══════════════════════════════════════════════════════════════
+function generate() {
+  var prompt = $('prompt').value.trim()
   if (!prompt) return
 
-  $('btnRun').disabled = true
-  show($('status'))
-  hide($('empty'))
+  setState('loading')
 
-  try {
-    const spec = await callAI(prompt)
-    addLog('', `→ ${spec.name || 'UI'} (${spec.width}×${spec.height})`)
-    parent.postMessage({ pluginMessage: { type: 'generate', spec } }, '*')
-  } catch (e) {
-    hide($('status'))
-    $('btnRun').disabled = false
+  callAI(prompt).then(function(spec) {
+    currentSpec = spec
+    renderPreview(spec)
+    setState('preview')
+  }).catch(function(e) {
+    setState('input')
     addLog('error', e.message)
-  }
+  })
+}
+
+function confirm() {
+  if (!currentSpec) return
+  setState('loading')
+  parent.postMessage({ pluginMessage: { type: 'generate', spec: currentSpec } }, '*')
+  currentSpec = null
+}
+
+function cancel() {
+  currentSpec = null
+  setState('input')
+}
+
+function undo() {
+  parent.postMessage({ pluginMessage: { type: 'undo' } }, '*')
+}
+
+function undoAll() {
+  parent.postMessage({ pluginMessage: { type: 'undo-all' } }, '*')
 }
 
 // ══════════════════════════════════════════════════════════════
-// LOG
+// ログ
 // ══════════════════════════════════════════════════════════════
 function addLog(type, message) {
-  const log = $('log')
-  const empty = $('empty')
-  if (empty) hide(empty)
-
-  const now = new Date().toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
-  const div = document.createElement('div')
-  div.className = `log-item${type ? ' ' + type : ''}`
-  div.innerHTML = `<div class="log-time">${now}</div>${message}`
+  var log = $('log')
+  var now = new Date().toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+  var div = document.createElement('div')
+  div.className = 'log-item' + (type ? ' ' + type : '')
+  div.innerHTML = '<span style="font-size:10px;color:var(--text-dim);font-family:monospace">' + now + '</span> ' + message
   log.insertBefore(div, log.firstChild)
+  // 最大5件
+  while (log.children.length > 5) log.removeChild(log.lastChild)
 }
 
 // ══════════════════════════════════════════════════════════════
-// EVENTS
+// イベント
 // ══════════════════════════════════════════════════════════════
 $('btnRun').addEventListener('click', generate)
+$('btnConfirm').addEventListener('click', confirm)
+$('btnCancel').addEventListener('click', cancel)
+$('btnUndo').addEventListener('click', undo)
+$('btnUndoAll').addEventListener('click', undoAll)
 
-document.addEventListener('keydown', e => {
+document.addEventListener('keydown', function(e) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
     e.preventDefault()
-    generate()
+    if (!currentSpec) generate()
+    else confirm()
   }
 })
 </script>
