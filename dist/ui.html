@@ -367,7 +367,8 @@ html, body {
       <div class="section-title" style="margin-top:8px">操作</div>
       <div class="btn-row">
         <button class="btn btn-secondary" id="btnRefresh" style="font-weight:400;font-size:12px">更新</button>
-        <button class="btn btn-danger" id="btnClearAll" style="font-weight:400;font-size:12px">全Collections削除</button>
+        <button class="btn btn-danger" id="btnClearPlugin" style="font-weight:400;font-size:12px">プラグイン作成分を削除</button>
+        <button class="btn btn-danger" id="btnClearAll" style="font-weight:400;font-size:12px;opacity:0.6">全削除</button>
       </div>
     </div>
   </div>
@@ -765,7 +766,8 @@ $('btnImport').addEventListener('click', doImportTokens)
 $('btnUndo').addEventListener('click', function() { parent.postMessage({ pluginMessage: { type: 'undo' } }, '*') })
 $('btnUndoAll').addEventListener('click', function() { parent.postMessage({ pluginMessage: { type: 'undo-all' } }, '*') })
 $('btnRefresh').addEventListener('click', function() { parent.postMessage({ pluginMessage: { type: 'list-collections' } }, '*') })
-$('btnClearAll').addEventListener('click', function() { if (confirm('全Variable Collectionsを削除しますか？')) parent.postMessage({ pluginMessage: { type: 'clear-all-collections' } }, '*') })
+$('btnClearPlugin').addEventListener('click', function() { if (confirm('プラグインが作成したCollectionsを削除しますか？')) parent.postMessage({ pluginMessage: { type: 'clear-all-collections', onlyPlugin: true } }, '*') })
+$('btnClearAll').addEventListener('click', function() { if (confirm('⚠ ファイル内の全Variable Collectionsを削除します。手動作成分も含まれます。本当に実行しますか？')) parent.postMessage({ pluginMessage: { type: 'clear-all-collections', onlyPlugin: false } }, '*') })
 
 document.addEventListener('keydown', function(e) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {

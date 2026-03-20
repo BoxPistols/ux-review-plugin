@@ -30,12 +30,25 @@ var WMAP = { Regular: "Regular", Medium: "Medium", SemiBold: "Semi Bold", Bold: 
 // Undo スタック
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 var undoStack = [];
+// プラグインが作成したCollectionのIDを追跡
+var pluginCreatedCollections = [];
 
 function undoEntry(entry) {
   var i;
   for (i = 0; i < entry.nodes.length; i++) { try { var n = figma.getNodeById(entry.nodes[i]); if (n) n.remove(); } catch(e){} }
   for (i = 0; i < entry.variables.length; i++) { try { var v = figma.variables.getVariableById(entry.variables[i]); if (v) v.remove(); } catch(e){} }
-  for (i = 0; i < entry.collections.length; i++) { try { var c = figma.variables.getVariableCollectionById(entry.collections[i]); if (c) c.remove(); } catch(e){} }
+  for (i = 0; i < entry.collections.length; i++) {
+    try { var c = figma.variables.getVariableCollectionById(entry.collections[i]); if (c) c.remove(); } catch(e){}
+    // 追跡リストからも除去
+    var idx = pluginCreatedCollections.indexOf(entry.collections[i]);
+    if (idx !== -1) pluginCreatedCollections.splice(idx, 1);
+  }
+  // リネームの復元
+  if (entry.renames) {
+    for (i = 0; i < entry.renames.length; i++) {
+      try { var rn = figma.getNodeById(entry.renames[i].id); if (rn) rn.name = entry.renames[i].oldName; } catch(e){}
+    }
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -86,6 +99,7 @@ function createVars(collections) {
     var col = collections[i];
     var c = figma.variables.createVariableCollection(col.collection);
     ids.collections.push(c.id);
+    pluginCreatedCollections.push(c.id);
     var mode = c.modes[0].id;
     for (var j = 0; j < col.variables.length; j++) {
       var vd = col.variables[j];
@@ -252,6 +266,7 @@ function importTokens(jsonStr) {
 
   var tokens = flattenTokens(parsed, "");
   if (!tokens.length) throw new Error("トークンが見つかりませんでした");
+  if (tokens.length > 500) throw new Error("トークン数が上限(500)を超えています: " + tokens.length + "件");
 
   // コレクション名ごとにグループ化（最上位キーで分類）
   var groups = {};
@@ -271,6 +286,7 @@ function importTokens(jsonStr) {
     var items = groups[gname];
     var coll = figma.variables.createVariableCollection(gname);
     ids.collections.push(coll.id);
+    pluginCreatedCollections.push(coll.id);
     var modeId = coll.modes[0].id;
 
     for (var j = 0; j < items.length; j++) {
@@ -319,17 +335,40 @@ function listCollections() {
   return result;
 }
 
-function clearAllCollections() {
+function clearAllCollections(onlyPluginCreated) {
   var collections = figma.variables.getLocalVariableCollections();
   var count = 0;
   for (var i = 0; i < collections.length; i++) {
+    // onlyPluginCreated=true の場合、プラグインが作ったもののみ削除
+    if (onlyPluginCreated && pluginCreatedCollections.indexOf(collections[i].id) === -1) continue;
     var vars = collections[i].variableIds;
     for (var j = 0; j < vars.length; j++) {
       try { var v = figma.variables.getVariableById(vars[j]); if (v) v.remove(); count++; } catch(e){}
     }
+    var cid = collections[i].id;
     try { collections[i].remove(); count++; } catch(e){}
+    var idx = pluginCreatedCollections.indexOf(cid);
+    if (idx !== -1) pluginCreatedCollections.splice(idx, 1);
   }
   return count;
+}
+
+// ── パス指定ノード検索（"Parent/Child" 形式もサポート）──
+function findByPath(root, path) {
+  if (!path) return null;
+  // スラッシュ区切りならパスとして解決
+  var parts = path.split("/");
+  if (parts.length > 1) {
+    var node = root;
+    for (var p = 0; p < parts.length; p++) {
+      var seg = parts[p];
+      node = node.findOne(function(n) { return n.name === seg; });
+      if (!node) return null;
+    }
+    return node;
+  }
+  // 単純な名前検索
+  return root.findOne(function(n) { return n.name === path; });
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -340,16 +379,19 @@ function applyReview(modifications) {
   if (!sel.length) return Promise.reject(new Error("フレームが選択されていません"));
 
   var original = sel[0];
+  var originalOldName = original.name;
   var clone = original.clone();
+  var renames = [];
 
   // To-Be としてラベル付け・配置
-  clone.name = original.name + " — To-Be";
+  clone.name = originalOldName + " \u2014 To-Be";
   clone.x = original.x + original.width + 60;
   clone.y = original.y;
 
-  // As-Is ラベルも追記
-  if (original.name.indexOf("As-Is") === -1 && original.name.indexOf("To-Be") === -1) {
-    original.name = original.name + " — As-Is";
+  // As-Is ラベルも追記（Undo時に元名に戻す）
+  if (originalOldName.indexOf("As-Is") === -1 && originalOldName.indexOf("To-Be") === -1) {
+    original.name = originalOldName + " \u2014 As-Is";
+    renames.push({ id: original.id, oldName: originalOldName });
   }
 
   // テキスト変更に必要なフォントを事前ロード
@@ -359,7 +401,7 @@ function applyReview(modifications) {
   for (var i = 0; i < modifications.length; i++) {
     var mod = modifications[i];
     if (textActions.indexOf(mod.action) !== -1) {
-      var target = clone.findOne(function(n) { return n.name === mod.target; });
+      var target = findByPath(clone, mod.target);
       if (target && target.type === "TEXT") {
         var fn = target.fontName;
         if (fn && fn !== figma.mixed) {
@@ -376,7 +418,7 @@ function applyReview(modifications) {
     var applied = 0;
     for (var i = 0; i < modifications.length; i++) {
       var mod = modifications[i];
-      var target = clone.findOne(function(n) { return n.name === mod.target; });
+      var target = findByPath(clone, mod.target);
       if (!target) continue;
 
       try {
@@ -420,7 +462,7 @@ function applyReview(modifications) {
     figma.currentPage.selection = [original, clone];
     figma.viewport.scrollAndZoomIntoView([original, clone]);
 
-    return { cloneId: clone.id, applied: applied, originalName: original.name };
+    return { cloneId: clone.id, applied: applied, originalName: original.name, renames: renames };
   });
 }
 
@@ -469,7 +511,7 @@ figma.ui.onmessage = function(msg) {
   // ── Review: As-Is → To-Be 適用 ──
   if (msg.type === "apply-review") {
     applyReview(msg.modifications).then(function(result) {
-      undoStack.push({ collections: [], variables: [], nodes: [result.cloneId] });
+      undoStack.push({ collections: [], variables: [], nodes: [result.cloneId], renames: result.renames });
       figma.ui.postMessage({ type: "review-applied", applied: result.applied, undoCount: undoStack.length });
       figma.notify("\u2713 To-Be\u3092\u751F\u6210 (" + result.applied + "\u4EF6\u9069\u7528)");
     }).catch(function(e) {
@@ -496,7 +538,7 @@ figma.ui.onmessage = function(msg) {
 
   // ── Manage: 全コレクション削除 ──
   if (msg.type === "clear-all-collections") {
-    var count = clearAllCollections();
+    var count = clearAllCollections(msg.onlyPlugin);
     figma.ui.postMessage({ type: "clear-done", count: count });
     figma.notify("\u2713 " + count + " \u4EF6\u524A\u9664");
   }
