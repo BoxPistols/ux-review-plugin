@@ -689,6 +689,26 @@ figma.ui.onmessage = function(msg) {
     });
   }
 
+  // ── Review: ノードハイライト（クリックで対象を選択＋ズーム）──
+  if (msg.type === "highlight-node") {
+    var sel = figma.currentPage.selection;
+    var root = sel.length ? sel[0] : null;
+    if (!root) { figma.notify("フレームを先に選択してください"); return; }
+    // 選択中フレーム内を検索
+    var target = findByPath(root, msg.nodeName);
+    // 見つからない場合、ページ全体から検索
+    if (!target) {
+      target = figma.currentPage.findOne(function(n) { return n.name === msg.nodeName; });
+    }
+    if (target) {
+      figma.currentPage.selection = [target];
+      figma.viewport.scrollAndZoomIntoView([target]);
+      figma.notify(target.name + " (" + target.type + ")");
+    } else {
+      figma.notify("\"" + msg.nodeName + "\" が見つかりません");
+    }
+  }
+
   // ── Tokens: デザイントークンImport ──
   if (msg.type === "import-tokens") {
     try {

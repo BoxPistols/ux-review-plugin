@@ -191,9 +191,11 @@ html, body {
 .mod-list { display: flex; flex-direction: column; gap: 0; }
 .mod-item {
   font-size: 13px; color: var(--text-sub);
-  padding: 10px 0; border-bottom: 1px solid var(--border);
-  line-height: 1.6;
+  padding: 10px 4px; border-bottom: 1px solid var(--border);
+  line-height: 1.6; cursor: pointer; transition: background 0.15s;
+  margin: 0 -4px;
 }
+.mod-item:hover { background: var(--surface-hi); }
 .mod-item:last-child { border-bottom: none; }
 .mod-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .mod-target { color: var(--accent); font-family: var(--mono); font-size: 12px; font-weight: 600; }
@@ -668,7 +670,7 @@ function renderReviewPreview(r) {
     h += '<div class="mod-list">'
     for (var i = 0; i < r.modifications.length; i++) {
       var m = r.modifications[i]
-      h += '<div class="mod-item">'
+      h += '<div class="mod-item" data-target="' + m.target + '">'
       h += '<div class="mod-head"><span class="mod-target">' + m.target + '</span><span class="mod-action">' + m.action + '</span>'
       if (m.value != null) h += '<span class="mod-value">' + m.value + '</span>'
       h += '</div>'
@@ -786,6 +788,13 @@ function addLog(logId, type, message) {
 $('btnReview').addEventListener('click', doReviewImprove)
 $('btnReviewConfirm2').addEventListener('click', doReviewConfirm)
 $('btnReviewCancel').addEventListener('click', doReviewCancel)
+// 修正リストのクリック → Figma上でノードをハイライト
+$('reviewPreview').addEventListener('click', function(e) {
+  var item = e.target.closest('.mod-item')
+  if (item && item.getAttribute('data-target')) {
+    parent.postMessage({ pluginMessage: { type: 'highlight-node', nodeName: item.getAttribute('data-target') } }, '*')
+  }
+})
 $('btnRun').addEventListener('click', doGenerate)
 $('btnConfirm').addEventListener('click', doConfirm)
 $('btnCancel').addEventListener('click', doCancel)
