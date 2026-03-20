@@ -333,6 +333,98 @@ function clearAllCollections() {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [Review] As-Is → To-Be クローン + 修正適用
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function applyReview(modifications) {
+  var sel = figma.currentPage.selection;
+  if (!sel.length) return Promise.reject(new Error("フレームが選択されていません"));
+
+  var original = sel[0];
+  var clone = original.clone();
+
+  // To-Be としてラベル付け・配置
+  clone.name = original.name + " — To-Be";
+  clone.x = original.x + original.width + 60;
+  clone.y = original.y;
+
+  // As-Is ラベルも追記
+  if (original.name.indexOf("As-Is") === -1 && original.name.indexOf("To-Be") === -1) {
+    original.name = original.name + " — As-Is";
+  }
+
+  // テキスト変更に必要なフォントを事前ロード
+  var textActions = ["set_text", "set_font_size", "set_font_weight"];
+  var fontPromises = [ensureFonts()];
+
+  for (var i = 0; i < modifications.length; i++) {
+    var mod = modifications[i];
+    if (textActions.indexOf(mod.action) !== -1) {
+      var target = clone.findOne(function(n) { return n.name === mod.target; });
+      if (target && target.type === "TEXT") {
+        var fn = target.fontName;
+        if (fn && fn !== figma.mixed) {
+          fontPromises.push(figma.loadFontAsync(fn));
+        }
+        if (mod.action === "set_font_weight") {
+          fontPromises.push(figma.loadFontAsync({ family: "Inter", style: WMAP[mod.value] || "Regular" }));
+        }
+      }
+    }
+  }
+
+  return Promise.all(fontPromises).then(function() {
+    var applied = 0;
+    for (var i = 0; i < modifications.length; i++) {
+      var mod = modifications[i];
+      var target = clone.findOne(function(n) { return n.name === mod.target; });
+      if (!target) continue;
+
+      try {
+        switch (mod.action) {
+          case "set_fill":
+            target.fills = solid(mod.value);
+            applied++; break;
+          case "set_text":
+            if (target.type === "TEXT") { target.characters = String(mod.value); applied++; }
+            break;
+          case "set_font_size":
+            if (target.type === "TEXT") { target.fontSize = Number(mod.value); applied++; }
+            break;
+          case "set_font_weight":
+            if (target.type === "TEXT") { target.fontName = { family: "Inter", style: WMAP[mod.value] || "Regular" }; applied++; }
+            break;
+          case "set_corner_radius":
+            if ("cornerRadius" in target) { target.cornerRadius = Number(mod.value); applied++; }
+            break;
+          case "set_padding":
+            var pv = Number(mod.value);
+            target.paddingTop = target.paddingBottom = target.paddingLeft = target.paddingRight = pv;
+            applied++; break;
+          case "set_item_spacing":
+            if ("itemSpacing" in target) { target.itemSpacing = Number(mod.value); applied++; }
+            break;
+          case "set_opacity":
+            target.opacity = Number(mod.value);
+            applied++; break;
+          case "set_stroke":
+            target.strokes = solid(mod.value); target.strokeWeight = d(target.strokeWeight, 1);
+            applied++; break;
+          case "remove":
+            target.remove();
+            applied++; break;
+        }
+      } catch(e) { /* skip failed modifications */ }
+    }
+
+    // 両方を選択してズーム
+    figma.currentPage.selection = [original, clone];
+    figma.viewport.scrollAndZoomIntoView([original, clone]);
+
+    return { cloneId: clone.id, applied: applied, originalName: original.name };
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // メッセージハンドラ
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 figma.ui.onmessage = function(msg) {
@@ -371,6 +463,17 @@ figma.ui.onmessage = function(msg) {
       figma.notify("\u2713 " + (parts.join(", ") || "\u751F\u6210\u5B8C\u4E86"));
     }).catch(function(e) {
       figma.ui.postMessage({ type: "error", error: e.message || String(e) });
+    });
+  }
+
+  // ── Review: As-Is → To-Be 適用 ──
+  if (msg.type === "apply-review") {
+    applyReview(msg.modifications).then(function(result) {
+      undoStack.push({ collections: [], variables: [], nodes: [result.cloneId] });
+      figma.ui.postMessage({ type: "review-applied", applied: result.applied, undoCount: undoStack.length });
+      figma.notify("\u2713 To-Be\u3092\u751F\u6210 (" + result.applied + "\u4EF6\u9069\u7528)");
+    }).catch(function(e) {
+      figma.ui.postMessage({ type: "review-error", error: e.message || String(e) });
     });
   }
 

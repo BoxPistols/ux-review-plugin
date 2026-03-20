@@ -77,6 +77,20 @@ html, body { font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size
 .pv-color { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.12); flex-shrink: 0; }
 .pv-variant { font-size: 12px; color: var(--text-sub); padding: 2px 8px; background: rgba(255,255,255,0.04); border-radius: 4px; margin: 2px 0; display: flex; align-items: center; gap: 6px; }
 
+/* Review result */
+.review-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.review-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 6px; }
+.review-label.asis { color: var(--yellow); }
+.review-label.tobe { color: var(--green); }
+.review-text { font-size: 13px; color: var(--text-sub); line-height: 1.7; }
+.review-score { font-size: 36px; font-family: monospace; font-weight: 500; text-align: center; padding: 8px 0; }
+.review-score.high { color: var(--green); }
+.review-score.mid { color: var(--yellow); }
+.review-score.low { color: var(--red); }
+.mod-item { font-size: 12px; color: var(--text-sub); padding: 6px 10px; background: rgba(255,255,255,0.03); border-radius: 6px; border-left: 3px solid var(--accent); margin: 3px 0; line-height: 1.5; }
+.mod-target { color: var(--accent); font-family: monospace; font-size: 11px; }
+.mod-reason { color: var(--text-dim); font-size: 11px; margin-top: 2px; }
+
 /* Collection cards */
 .coll-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; }
 .coll-name { font-size: 13px; font-weight: 500; }
@@ -164,10 +178,11 @@ html, body { font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size
     <div class="panel-body">
       <div class="empty-state" id="reviewEmpty">
         <div class="empty-icon">✦</div>
-        <div>Figmaでフレームを選択し<br>AIレビューを実行します</div>
-        <div style="font-size:11px;color:var(--text-dim)">Phase 2 で実装予定:<br>スコア採点・チャット・履歴・フロー分析</div>
+        <div>Figmaでフレームを選択して<br>「Review & Improve」を実行</div>
+        <div style="font-size:11px;color:var(--text-dim)">AIがAs-Is分析 → To-Beをクローン生成<br>元のデザインは変更されません</div>
       </div>
-      <div class="hidden" id="reviewResult"></div>
+      <div class="hidden" id="reviewPreview"></div>
+      <div class="log" id="reviewLog"></div>
     </div>
   </div>
 
@@ -207,6 +222,12 @@ html, body { font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size
   <!-- Bottom bar -->
   <div class="bottom-bar">
     <div class="status hidden" id="status"><span class="spinner"></span><span id="statusText">処理中...</span></div>
+    <!-- Review actions -->
+    <div class="btn-row hidden" id="actReview"><button class="btn btn-primary" id="btnReview">Review & Improve</button></div>
+    <div class="btn-row hidden" id="actReviewConfirm">
+      <button class="btn btn-secondary" id="btnReviewCancel">キャンセル</button>
+      <button class="btn btn-primary" id="btnReviewConfirm2">To-Beを生成</button>
+    </div>
     <!-- Generate actions -->
     <div class="btn-row hidden" id="actGenInput"><button class="btn btn-primary" id="btnRun">生成 →</button></div>
     <div class="btn-row hidden" id="actGenPreview">
@@ -247,8 +268,14 @@ document.querySelectorAll('.tab').forEach(function(t) {
   t.addEventListener('click', function() { switchTab(t.getAttribute('data-panel')) })
 })
 
+var currentReview = null
+var selectedNodes = []
+
 function updateBottomBar() {
-  hide($('actGenInput')); hide($('actGenPreview')); hide($('actTokens'))
+  hide($('actReview')); hide($('actReviewConfirm')); hide($('actGenInput')); hide($('actGenPreview')); hide($('actTokens'))
+  if (currentTab === 'review') {
+    if (currentReview) show($('actReviewConfirm')); else if (selectedNodes.length) show($('actReview'))
+  }
   if (currentTab === 'generate') {
     if (currentSpec) show($('actGenPreview')); else show($('actGenInput'))
   }
@@ -299,15 +326,32 @@ window.onmessage = function(event) {
 
   // Selection
   if (msg.type === 'selection-changed') {
+    selectedNodes = msg.nodes
     $('selDot').classList.add('on')
     var n = msg.nodes[0]
     $('selName').textContent = msg.isMulti ? msg.nodes.length + 'フレームを選択中' : n.name
     $('selMeta').textContent = n.width ? n.width + '×' + n.height : ''
+    updateBottomBar()
   }
   if (msg.type === 'selection-cleared') {
+    selectedNodes = []
     $('selDot').classList.remove('on')
     $('selName').textContent = 'フレームを選択してください'
     $('selMeta').textContent = ''
+    updateBottomBar()
+  }
+
+  // Review result
+  if (msg.type === 'review-applied') {
+    hide($('status'))
+    addLog('reviewLog', 'ok', '✓ To-Be生成完了 (' + msg.applied + '件適用)')
+    currentReview = null; updateBottomBar()
+    if (msg.undoCount > 0) show($('actUndo'))
+  }
+  if (msg.type === 'review-error') {
+    hide($('status'))
+    addLog('reviewLog', 'error', msg.error)
+    currentReview = null; updateBottomBar()
   }
 
   // Generate
@@ -373,6 +417,105 @@ function callAI(prompt) {
      .then(function(d) { return d.choices[0].message.content })
   }
   return p.then(function(c) { if(!c) throw new Error('空の応答'); try{return JSON.parse(c)}catch(e){ var m=c.match(/```(?:json)?\s*([\s\S]*?)\s*```/); if(m)return JSON.parse(m[1]); throw new Error('JSON解析失敗') } })
+}
+
+// ══════════════════════════════════════════════════════════════
+// Review: ノード→テキスト変換
+// ══════════════════════════════════════════════════════════════
+function nodeToText(n, depth) {
+  if (depth > 4) return ''
+  var ind = ''; for (var x = 0; x < depth; x++) ind += '  '
+  var s = ind + '[' + n.type + '] ' + n.name
+  if (n.componentName) s += ' (Component: ' + n.componentName + ')'
+  if (n.width) s += ' ' + n.width + 'x' + n.height + 'px'
+  s += '\n'
+  if (n.texts && n.texts.length) {
+    for (var i = 0; i < Math.min(n.texts.length, 5); i++) s += ind + '  "' + n.texts[i] + '"\n'
+  }
+  if (n.children) { for (var i = 0; i < Math.min(n.children.length, 20); i++) s += nodeToText(n.children[i], depth + 1) }
+  return s
+}
+
+var REVIEW_PROMPT = 'あなたはMaterial Design 3に精通したUI/UXシニアレビュアーです。\n以下のFigmaフレーム構造を分析し、As-Is(現状分析)とTo-Be(改善提案)を出力してください。\n\nさらに、改善を反映するための具体的な修正指示をmodificationsとして出力してください。\n修正はフレームをクローンした上で適用されるため、元のデザインは保持されます。\n\n出力形式(JSONのみ。前置き・コードブロック不要):\n{\n  "asIs": "現状分析(3-5文。構造的な問題点を明確に)",\n  "toBe": "改善方針(3-5文。具体的な変更の方向性)",\n  "score": 1-100,\n  "modifications": [\n    { "target": "ノード名(完全一致)", "action": "アクション名", "value": "新しい値", "reason": "変更理由(1文)" }\n  ]\n}\n\n修正アクション:\n- set_fill: 背景色変更 value:"#hex"\n- set_text: テキスト変更 value:"新テキスト"\n- set_font_size: フォントサイズ変更 value:数値\n- set_font_weight: ウェイト変更 value:"Regular|Medium|SemiBold|Bold"\n- set_corner_radius: 角丸変更 value:数値\n- set_padding: パディング変更 value:数値\n- set_item_spacing: 間隔変更 value:数値\n- set_opacity: 不透明度変更 value:0-1\n- set_stroke: ストローク変更 value:"#hex"\n- remove: ノード削除\n\nルール:\n- modifications最大8件。インパクト大の変更のみ\n- targetはフレーム内のノード名と完全一致\n- Material Design 3準拠(カラー、スペーシング4dpグリッド、WCAG AA)\n- 本文#0F172A サブ#475569 キャプション#94A3B8\n- Button radius 20, Card radius 12, padding 16\n- 構造・コンポーネント選定の改善を優先'
+
+function doReviewImprove() {
+  if (!selectedNodes.length) return
+  hide($('reviewEmpty'))
+  show($('status')); $('statusText').textContent = 'AIがデザインを分析中...'
+  $('btnReview').disabled = true
+
+  var text = ''
+  for (var i = 0; i < selectedNodes.length; i++) {
+    var n = selectedNodes[i]
+    text += '## フレーム: ' + n.name + ' (' + n.width + 'x' + n.height + 'px)\n'
+    text += nodeToText(n, 0) + '\n'
+  }
+
+  var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
+  if (!apiKey) { hide($('status')); $('btnReview').disabled = false; addLog('reviewLog','error','APIキーを設定してください'); return }
+
+  var p
+  if (isGemini(model)) {
+    p = fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ system_instruction:{parts:[{text:REVIEW_PROMPT}]}, contents:[{parts:[{text:text}]}], generationConfig:{response_mime_type:'application/json',temperature:0.3} })
+    }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'Gemini error')}); return r.json() })
+     .then(function(d) { return d.candidates[0].content.parts[0].text })
+  } else {
+    p = fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      body:JSON.stringify({ model:model, messages:[{role:'system',content:REVIEW_PROMPT},{role:'user',content:text}], response_format:{type:'json_object'}, max_completion_tokens:4000 })
+    }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'OpenAI error')}); return r.json() })
+     .then(function(d) { return d.choices[0].message.content })
+  }
+
+  p.then(function(c) {
+    var result = JSON.parse(c)
+    currentReview = result
+    renderReviewPreview(result)
+    hide($('status')); $('btnReview').disabled = false; updateBottomBar()
+  }).catch(function(e) {
+    hide($('status')); $('btnReview').disabled = false
+    addLog('reviewLog', 'error', e.message)
+  })
+}
+
+function renderReviewPreview(r) {
+  var scoreClass = r.score >= 75 ? 'high' : r.score >= 50 ? 'mid' : 'low'
+  var h = '<div class="review-score ' + scoreClass + '">' + r.score + '<span style="font-size:14px;color:var(--text-dim)"> / 100</span></div>'
+  h += '<div class="review-card"><div class="review-label asis">AS-IS</div><div class="review-text">' + r.asIs + '</div></div>'
+  h += '<div class="review-card"><div class="review-label tobe">TO-BE</div><div class="review-text">' + r.toBe + '</div></div>'
+
+  if (r.modifications && r.modifications.length) {
+    h += '<div class="section-title" style="margin-top:4px">修正内容 (' + r.modifications.length + '件)</div>'
+    for (var i = 0; i < r.modifications.length; i++) {
+      var m = r.modifications[i]
+      h += '<div class="mod-item"><span class="mod-target">' + m.target + '</span> → ' + m.action
+      if (m.value != null) h += ' = <strong>' + m.value + '</strong>'
+      if (m.reason) h += '<div class="mod-reason">' + m.reason + '</div>'
+      h += '</div>'
+    }
+  }
+
+  $('reviewPreview').innerHTML = h
+  show($('reviewPreview'))
+}
+
+function doReviewConfirm() {
+  if (!currentReview || !currentReview.modifications) return
+  show($('status')); $('statusText').textContent = 'To-Beフレームを生成中...'
+  parent.postMessage({ pluginMessage: { type: 'apply-review', modifications: currentReview.modifications } }, '*')
+  currentReview = null
+  hide($('reviewPreview'))
+  show($('reviewEmpty'))
+  updateBottomBar()
+}
+
+function doReviewCancel() {
+  currentReview = null
+  hide($('reviewPreview'))
+  show($('reviewEmpty'))
+  updateBottomBar()
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -459,6 +602,9 @@ function addLog(logId, type, message) {
 // ══════════════════════════════════════════════════════════════
 // イベント
 // ══════════════════════════════════════════════════════════════
+$('btnReview').addEventListener('click', doReviewImprove)
+$('btnReviewConfirm2').addEventListener('click', doReviewConfirm)
+$('btnReviewCancel').addEventListener('click', doReviewCancel)
 $('btnRun').addEventListener('click', doGenerate)
 $('btnConfirm').addEventListener('click', doConfirm)
 $('btnCancel').addEventListener('click', doCancel)
