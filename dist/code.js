@@ -353,6 +353,166 @@ function clearAllCollections(onlyPluginCreated) {
   return count;
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Variables のみの場合にキャンバス上にスウォッチを自動生成
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function createVariableSwatch(spec) {
+  return ensureFonts().then(function() {
+    var SWATCH = 48;
+    var GAP = 8;
+    var PAD = 24;
+    var center = figma.viewport.center;
+
+    // 全コレクションのカラー変数を収集
+    var colorVars = [];
+    var floatVars = [];
+    for (var i = 0; i < spec.variables.length; i++) {
+      var col = spec.variables[i];
+      for (var j = 0; j < col.variables.length; j++) {
+        var v = col.variables[j];
+        if (v.type === "COLOR") colorVars.push({ name: v.name, value: v.value, collection: col.collection });
+        else floatVars.push({ name: v.name, value: v.value, collection: col.collection });
+      }
+    }
+
+    if (!colorVars.length && !floatVars.length) return null;
+
+    var cols = Math.min(Math.max(colorVars.length, 1), 8);
+    var rows = Math.ceil(colorVars.length / cols);
+    var frameW = PAD * 2 + cols * SWATCH + (cols - 1) * GAP;
+    var frameH = PAD + 40; // title area
+
+    // Color section height
+    if (colorVars.length) frameH += rows * SWATCH + (rows - 1) * GAP + 24 + 16; // swatches + labels space
+    // Float section height
+    if (floatVars.length) frameH += floatVars.length * 24 + 24;
+    frameH += PAD;
+
+    var root = figma.createFrame();
+    root.name = spec.name || "Variable Swatch";
+    root.resize(Math.max(frameW, 280), Math.max(frameH, 120));
+    root.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+    root.layoutMode = "VERTICAL";
+    root.paddingTop = root.paddingBottom = PAD;
+    root.paddingLeft = root.paddingRight = PAD;
+    root.itemSpacing = 16;
+    root.primaryAxisSizingMode = "AUTO";
+    root.counterAxisSizingMode = "AUTO";
+
+    // Title
+    var title = figma.createText();
+    title.fontName = { family: "Inter", style: "Semi Bold" };
+    title.characters = spec.name || "Variables";
+    title.fontSize = 16;
+    title.fills = solid("#0F172A");
+    root.appendChild(title);
+
+    if (spec.description) {
+      var desc = figma.createText();
+      desc.fontName = { family: "Inter", style: "Regular" };
+      desc.characters = spec.description;
+      desc.fontSize = 13;
+      desc.fills = solid("#64748B");
+      root.appendChild(desc);
+    }
+
+    // Color swatches
+    if (colorVars.length) {
+      var colorSection = figma.createFrame();
+      colorSection.name = "Colors";
+      colorSection.layoutMode = "VERTICAL";
+      colorSection.itemSpacing = 8;
+      colorSection.fills = [];
+      colorSection.primaryAxisSizingMode = "AUTO";
+      colorSection.counterAxisSizingMode = "AUTO";
+
+      var colorRow = null;
+      for (var ci = 0; ci < colorVars.length; ci++) {
+        if (ci % cols === 0) {
+          colorRow = figma.createFrame();
+          colorRow.name = "Row";
+          colorRow.layoutMode = "HORIZONTAL";
+          colorRow.itemSpacing = GAP;
+          colorRow.fills = [];
+          colorRow.primaryAxisSizingMode = "AUTO";
+          colorRow.counterAxisSizingMode = "AUTO";
+          colorSection.appendChild(colorRow);
+        }
+
+        var swatchGroup = figma.createFrame();
+        swatchGroup.name = colorVars[ci].name;
+        swatchGroup.layoutMode = "VERTICAL";
+        swatchGroup.itemSpacing = 4;
+        swatchGroup.fills = [];
+        swatchGroup.primaryAxisSizingMode = "AUTO";
+        swatchGroup.counterAxisSizingMode = "AUTO";
+
+        var swatch = figma.createRectangle();
+        swatch.name = "Color";
+        swatch.resize(SWATCH, SWATCH);
+        swatch.cornerRadius = 8;
+        swatch.fills = solid(colorVars[ci].value);
+        swatchGroup.appendChild(swatch);
+
+        var label = figma.createText();
+        label.fontName = { family: "Inter", style: "Regular" };
+        var shortName = colorVars[ci].name.split("/").pop();
+        label.characters = shortName;
+        label.fontSize = 12;
+        label.fills = solid("#64748B");
+        swatchGroup.appendChild(label);
+
+        colorRow.appendChild(swatchGroup);
+      }
+      root.appendChild(colorSection);
+    }
+
+    // Float values
+    if (floatVars.length) {
+      var floatSection = figma.createFrame();
+      floatSection.name = "Values";
+      floatSection.layoutMode = "VERTICAL";
+      floatSection.itemSpacing = 4;
+      floatSection.fills = [];
+      floatSection.primaryAxisSizingMode = "AUTO";
+      floatSection.counterAxisSizingMode = "AUTO";
+
+      for (var fi = 0; fi < floatVars.length; fi++) {
+        var row = figma.createFrame();
+        row.name = floatVars[fi].name;
+        row.layoutMode = "HORIZONTAL";
+        row.itemSpacing = 8;
+        row.fills = [];
+        row.primaryAxisSizingMode = "AUTO";
+        row.counterAxisSizingMode = "AUTO";
+
+        var nameText = figma.createText();
+        nameText.fontName = { family: "Inter", style: "Medium" };
+        nameText.characters = floatVars[fi].name.split("/").pop();
+        nameText.fontSize = 13;
+        nameText.fills = solid("#0F172A");
+        row.appendChild(nameText);
+
+        var valText = figma.createText();
+        valText.fontName = { family: "Inter", style: "Regular" };
+        valText.characters = String(floatVars[fi].value);
+        valText.fontSize = 13;
+        valText.fills = solid("#64748B");
+        row.appendChild(valText);
+
+        floatSection.appendChild(row);
+      }
+      root.appendChild(floatSection);
+    }
+
+    root.x = Math.round(center.x - root.width / 2);
+    root.y = Math.round(center.y - root.height / 2);
+    figma.currentPage.selection = [root];
+    figma.viewport.scrollAndZoomIntoView([root]);
+    return root.id;
+  });
+}
+
 // ── パス指定ノード検索（"Parent/Child" 形式もサポート）──
 function findByPath(root, path) {
   if (!path) return null;
@@ -492,6 +652,16 @@ figma.ui.onmessage = function(msg) {
     if (spec.frames && spec.frames.length) {
       chain = chain.then(function() {
         return createFrames(spec.frames).then(function(r) { entry.nodes = entry.nodes.concat(r.nodes); });
+      });
+    }
+
+    // Variables のみでキャンバス上に何もない場合、スウォッチを自動生成
+    var hasCanvas = (spec.components && spec.components.length) || (spec.frames && spec.frames.length);
+    if (!hasCanvas && spec.variables && spec.variables.length) {
+      chain = chain.then(function() {
+        return createVariableSwatch(spec).then(function(nodeId) {
+          if (nodeId) entry.nodes.push(nodeId);
+        });
       });
     }
 
