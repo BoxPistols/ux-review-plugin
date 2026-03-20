@@ -110,6 +110,30 @@ html, body { font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size
 .btn-secondary:hover:not(:disabled) { border-color: var(--border-hi); color: var(--text); }
 .btn-danger { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
 .btn-danger:hover:not(:disabled) { border-color: var(--red); }
+/* External context */
+.ext-ctx { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+.ext-ctx-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--surface); cursor: pointer; user-select: none; }
+.ext-ctx-header:hover { background: var(--surface-hi); }
+.ext-ctx-title { font-size: 12px; font-weight: 500; color: var(--text-sub); display: flex; align-items: center; gap: 6px; }
+.ext-ctx-arrow { font-size: 10px; color: var(--text-dim); transition: transform 0.15s; }
+.ext-ctx-arrow.open { transform: rotate(90deg); }
+.ext-ctx-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); }
+.ext-ctx-body.collapsed { display: none; }
+.ext-ctx-input-row { display: flex; gap: 6px; }
+.ext-ctx-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--text); outline: none; font-family: monospace; min-width: 0; }
+.ext-ctx-input:focus { border-color: var(--accent); }
+.ext-ctx-input::placeholder { color: var(--text-dim); }
+.btn-fetch { padding: 6px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; font-size: 11px; color: var(--text-sub); cursor: pointer; font-family: inherit; white-space: nowrap; }
+.btn-fetch:hover { border-color: var(--accent); color: var(--accent); }
+.btn-fetch:disabled { opacity: 0.4; cursor: not-allowed; }
+.ctx-summary { font-size: 11px; color: var(--text-sub); line-height: 1.7; }
+.ctx-badge { display: inline-block; padding: 1px 8px; background: var(--accent-bg); color: var(--accent); border-radius: 4px; font-size: 10px; font-weight: 500; margin: 1px 2px; }
+.ctx-status { font-size: 11px; font-family: monospace; }
+.ctx-status.ok { color: var(--green); }
+.ctx-status.error { color: var(--red); }
+.ctx-clear { font-size: 10px; color: var(--text-dim); cursor: pointer; text-decoration: underline; }
+.ctx-clear:hover { color: var(--red); }
+
 .hidden { display: none !important; }
 </style>
 </head>
@@ -144,6 +168,13 @@ html, body { font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size
       <button class="btn-test" id="btnTest">テスト</button>
       <span class="test-result hidden" id="testResult"></span>
     </div>
+    <div style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px">
+      <div class="s-row">
+        <span class="s-label" style="width:80px">Figma PAT</span>
+        <input class="s-input" id="figmaToken" type="password" placeholder="Figma Personal Access Token..." />
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:4px;padding-left:2px">外部Figmaファイル参照に必要。Figma設定 → Security → Personal access tokens で発行</div>
+    </div>
   </div>
 
   <!-- Tabs -->
@@ -174,6 +205,22 @@ html, body { font-family: -apple-system, 'Helvetica Neue', sans-serif; font-size
   <!-- ═══ GENERATE TAB ═══ -->
   <div class="tab-panel" id="panel-generate">
     <div class="panel-body" style="padding-bottom:0">
+      <!-- External Context -->
+      <div class="ext-ctx">
+        <div class="ext-ctx-header" id="extCtxToggle">
+          <span class="ext-ctx-title"><span class="ext-ctx-arrow" id="extCtxArrow">▶</span> 外部Figmaファイル参照</span>
+          <span class="ctx-badge hidden" id="ctxActiveBadge">Context ON</span>
+        </div>
+        <div class="ext-ctx-body collapsed" id="extCtxBody">
+          <div style="font-size:11px;color:var(--text-dim);line-height:1.6">別のFigmaファイルからデザイントークン・コンポーネント構造・スタイルを読み込み、生成時のコンテキストとして利用します。</div>
+          <div class="ext-ctx-input-row">
+            <input class="ext-ctx-input" id="figmaFileUrl" placeholder="FigmaファイルのURL または File Key..." />
+            <button class="btn-fetch" id="btnFetch">取得</button>
+          </div>
+          <div class="hidden" id="ctxStatus"></div>
+          <div class="hidden" id="ctxSummary"></div>
+        </div>
+      </div>
       <textarea class="prompt" id="prompt" placeholder="作りたいUIを自然言語で記述...&#10;&#10;例: ボタンのバリアントセット（Primary/Secondary × S/M/L）&#10;例: カード一覧画面（作成前/作成後の2状態）&#10;例: SaaS向けデザイントークン"></textarea>
       <div class="preview hidden" id="genPreview"></div>
       <div class="log" id="genLog"></div>
@@ -262,8 +309,9 @@ parent.postMessage({ pluginMessage: { type: 'load-settings' } }, '*')
 $('btnSettings').addEventListener('click', function() { $('settings').classList.toggle('hidden') })
 $('apiKey').addEventListener('change', saveSettings)
 $('modelSelect').addEventListener('change', saveSettings)
+$('figmaToken').addEventListener('change', saveSettings)
 function saveSettings() {
-  parent.postMessage({ pluginMessage: { type: 'save-settings', apiKey: $('apiKey').value.trim(), model: $('modelSelect').value } }, '*')
+  parent.postMessage({ pluginMessage: { type: 'save-settings', apiKey: $('apiKey').value.trim(), model: $('modelSelect').value, figmaToken: $('figmaToken').value.trim() } }, '*')
 }
 
 // 接続テスト
@@ -293,6 +341,7 @@ window.onmessage = function(event) {
   if (msg.type === 'settings-loaded') {
     if (msg.apiKey) $('apiKey').value = msg.apiKey
     if (msg.model) $('modelSelect').value = msg.model
+    if (msg.figmaToken) $('figmaToken').value = msg.figmaToken
     if (msg.apiKey) hide($('settings'))
     updateBottomBar()
   }
@@ -353,6 +402,237 @@ window.onmessage = function(event) {
 var SYSTEM_PROMPT = 'あなたはMaterial Design 3ガイドラインに精通したシニアUIデザイナーです。Figma上で直接生成可能なJSON構造を出力してください。\n\n出力形式(JSONのみ。前置き・コードブロック不要):\n{"name":"名前","description":"概要","variables":[{"collection":"名前","variables":[{"name":"token/name","type":"COLOR|FLOAT","value":"#hex|数値"}]}],"components":[{"name":"Button","variants":[{"props":{"Style":"Primary","Size":"Medium"},"fill":"#hex","stroke":"#hex","textColor":"#hex","label":"テキスト","fontSize":14,"fontWeight":"Medium","paddingX":24,"paddingY":12,"cornerRadius":20}]}],"frames":[{"name":"画面名","type":"FRAME","width":390,"height":844,"fill":"#FFFFFF","layoutMode":"VERTICAL","padding":24,"itemSpacing":16,"counterAxisSizingMode":"FIXED","children":[...]}]}\n\nframesのchildren型:\nTEXT:{"type":"TEXT","text":"...","fontSize":14,"fontWeight":"Bold","color":"#hex","fillWidth":true}\nRECT:{"type":"RECT","width":数値,"height":数値,"fill":"#hex","cornerRadius":数値,"fillWidth":true}\nELLIPSE:{"type":"ELLIPSE","width":40,"height":40,"fill":"#hex"}\nFRAME:{"type":"FRAME","name":"名前","layoutMode":"VERTICAL|HORIZONTAL","padding":16,"paddingX":16,"paddingY":12,"itemSpacing":8,"fill":"#hex","cornerRadius":12,"fillWidth":true,"children":[...]}\n\nMaterial Design 3 トークン:\nカラー: Primary #2563EB, OnPrimary #FFF, PrimaryContainer #DBEAFE, Surface #FFF, SurfaceVariant #F1F5F9, OnSurface #0F172A, OnSurfaceVariant #475569, Outline #CBD5E1, Error #DC2626, Success #16A34A\nタイポグラフィ: Display 36-57 Bold, Headline 24-32 SemiBold, Title 16-22 SemiBold, Body 14-16 Regular, Label 12-14 Medium\nスペーシング(4dpグリッド): 4,8,12,16,20,24,32,40,48\n角丸: Small 8, Medium 12, Large 16, Full 20-28\nButton Filled: h40-48 paddingX24 paddingY12 radius20 fontSize14\nCard: padding16 radius12 fill#F8FAFC\n\n設計ルール:\n- 全コンテナにAuto Layout(layoutMode)必須。絶対座標禁止\n- fillWidth:trueで親幅いっぱい。テキスト・カードは基本fillWidth:true\n- FRAMEには意味ある名前を付ける\n- 深さ3-5のネスト(Screen>Section>Card>Row>TextGroup)\n- 本文#0F172A サブ#475569 キャプション#94A3B8 コントラストWCAG AA\n- 4dpグリッド厳守。奇数値禁止\n- インタラクション指示時:Before/Afterの2フレーム生成。追加要素はPrimaryContainerでハイライト\n- アイコンはELLIPSE/RECTで抽象表現。絵文字禁止\n- 1フレーム内children直置き10個以下(グループ化する)'
 
 // ══════════════════════════════════════════════════════════════
+// 外部Figmaファイル コンテキスト取得
+// ══════════════════════════════════════════════════════════════
+var externalContext = null // 取得済み外部コンテキスト
+
+function parseFigmaFileKey(input) {
+  input = (input || '').trim()
+  // URL形式: https://www.figma.com/design/XXXXX/... or /file/XXXXX/...
+  var m = input.match(/figma\.com\/(?:file|design)\/([a-zA-Z0-9]+)/)
+  if (m) return m[1]
+  // 直接キー (英数字のみ)
+  if (/^[a-zA-Z0-9]{10,}$/.test(input)) return input
+  return null
+}
+
+function fetchFigmaFile(fileKey, token) {
+  return fetch('https://api.figma.com/v1/files/' + fileKey + '?depth=2', {
+    headers: { 'X-Figma-Token': token }
+  }).then(function(r) {
+    if (!r.ok) return r.json().then(function(e) { throw new Error(e.message || e.err || 'Figma API error: HTTP ' + r.status) }).catch(function(e) { if (e.message) throw e; throw new Error('Figma API error: HTTP ' + r.status) })
+    return r.json()
+  })
+}
+
+function fetchFigmaStyles(fileKey, token) {
+  return fetch('https://api.figma.com/v1/files/' + fileKey + '/styles', {
+    headers: { 'X-Figma-Token': token }
+  }).then(function(r) { return r.ok ? r.json() : { meta: { styles: [] } } })
+   .catch(function() { return { meta: { styles: [] } } })
+}
+
+function fetchFigmaVariables(fileKey, token) {
+  return fetch('https://api.figma.com/v1/files/' + fileKey + '/variables/local', {
+    headers: { 'X-Figma-Token': token }
+  }).then(function(r) { return r.ok ? r.json() : { meta: { variables: {}, variableCollections: {} } } })
+   .catch(function() { return { meta: { variables: {}, variableCollections: {} } } })
+}
+
+function extractColorFromFigma(color) {
+  if (!color) return null
+  var r = Math.round((color.r || 0) * 255)
+  var g = Math.round((color.g || 0) * 255)
+  var b = Math.round((color.b || 0) * 255)
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()
+}
+
+function extractComponentsFromTree(node, results, depth) {
+  if (depth > 3) return
+  if (!node) return
+  if (node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') {
+    var info = { name: node.name, type: node.type }
+    if (node.absoluteBoundingBox) { info.width = Math.round(node.absoluteBoundingBox.width); info.height = Math.round(node.absoluteBoundingBox.height) }
+    if (node.type === 'COMPONENT_SET' && node.children) {
+      info.variants = node.children.slice(0, 20).map(function(c) { return c.name })
+    }
+    if (node.fills && node.fills.length && node.fills[0].color) { info.fill = extractColorFromFigma(node.fills[0].color) }
+    if (node.cornerRadius) info.cornerRadius = node.cornerRadius
+    if (node.layoutMode) info.layoutMode = node.layoutMode
+    if (node.itemSpacing) info.itemSpacing = node.itemSpacing
+    results.push(info)
+  }
+  if (node.children) {
+    for (var i = 0; i < node.children.length; i++) extractComponentsFromTree(node.children[i], results, depth + 1)
+  }
+}
+
+function buildExternalContext(fileData, stylesData, varsData) {
+  var ctx = { fileName: fileData.name || 'Unknown', components: [], styles: [], tokens: [], pages: [] }
+
+  // ページ情報
+  if (fileData.document && fileData.document.children) {
+    for (var i = 0; i < fileData.document.children.length; i++) {
+      var page = fileData.document.children[i]
+      ctx.pages.push(page.name)
+      extractComponentsFromTree(page, ctx.components, 0)
+    }
+  }
+
+  // スタイル
+  if (stylesData && stylesData.meta && stylesData.meta.styles) {
+    ctx.styles = stylesData.meta.styles.slice(0, 50).map(function(s) {
+      return { name: s.name, type: s.style_type, description: s.description || '' }
+    })
+  }
+
+  // Variables (デザイントークン)
+  if (varsData && varsData.meta) {
+    var collections = varsData.meta.variableCollections || {}
+    var variables = varsData.meta.variables || {}
+    var collKeys = Object.keys(collections)
+    for (var ci = 0; ci < collKeys.length; ci++) {
+      var coll = collections[collKeys[ci]]
+      var collVars = []
+      var varKeys = Object.keys(variables)
+      for (var vi = 0; vi < varKeys.length; vi++) {
+        var v = variables[varKeys[vi]]
+        if (v.variableCollectionId === collKeys[ci]) {
+          var modeId = coll.modes && coll.modes[0] ? coll.modes[0].modeId : null
+          var val = modeId && v.valuesByMode ? v.valuesByMode[modeId] : null
+          var tokenInfo = { name: v.name, type: v.resolvedType }
+          if (val && typeof val === 'object' && 'r' in val) {
+            tokenInfo.value = extractColorFromFigma(val)
+          } else if (val != null && typeof val !== 'object') {
+            tokenInfo.value = val
+          }
+          collVars.push(tokenInfo)
+        }
+      }
+      ctx.tokens.push({ collection: coll.name, variables: collVars.slice(0, 100) })
+    }
+  }
+
+  return ctx
+}
+
+function contextToPromptText(ctx) {
+  var lines = []
+  lines.push('## 参照デザインシステム: ' + ctx.fileName)
+  if (ctx.tokens.length) {
+    lines.push('\n### デザイントークン')
+    for (var i = 0; i < ctx.tokens.length; i++) {
+      var coll = ctx.tokens[i]
+      lines.push('Collection: ' + coll.collection)
+      for (var j = 0; j < coll.variables.length; j++) {
+        var v = coll.variables[j]
+        lines.push('  ' + v.name + ' (' + v.type + ')' + (v.value != null ? ' = ' + v.value : ''))
+      }
+    }
+  }
+  if (ctx.styles.length) {
+    lines.push('\n### スタイル')
+    for (var i = 0; i < Math.min(ctx.styles.length, 30); i++) {
+      var s = ctx.styles[i]
+      lines.push('  ' + s.name + ' [' + s.type + ']' + (s.description ? ' - ' + s.description : ''))
+    }
+  }
+  if (ctx.components.length) {
+    lines.push('\n### コンポーネント')
+    for (var i = 0; i < Math.min(ctx.components.length, 30); i++) {
+      var c = ctx.components[i]
+      var desc = c.name + ' (' + c.type + ')'
+      if (c.width) desc += ' ' + c.width + '×' + c.height
+      if (c.fill) desc += ' fill:' + c.fill
+      if (c.cornerRadius) desc += ' radius:' + c.cornerRadius
+      if (c.layoutMode) desc += ' layout:' + c.layoutMode
+      if (c.variants) desc += '\n    variants: ' + c.variants.slice(0, 10).join(', ')
+      lines.push('  ' + desc)
+    }
+  }
+  lines.push('\n上記のデザインシステムに準拠し、同じカラーパレット・タイポグラフィ・スペーシング・コンポーネントパターンを踏襲した一貫性のあるデザインを生成してください。Material Design 3のデフォルト値より、参照デザインシステムの値を優先してください。')
+  return lines.join('\n')
+}
+
+function renderContextSummary(ctx) {
+  var h = '<div class="ctx-summary">'
+  h += '<strong>' + ctx.fileName + '</strong> から取得済み<br>'
+  var badges = []
+  var totalTokens = 0
+  for (var i = 0; i < ctx.tokens.length; i++) totalTokens += ctx.tokens[i].variables.length
+  if (totalTokens > 0) badges.push('<span class="ctx-badge">' + totalTokens + ' tokens</span>')
+  if (ctx.styles.length) badges.push('<span class="ctx-badge">' + ctx.styles.length + ' styles</span>')
+  if (ctx.components.length) badges.push('<span class="ctx-badge">' + ctx.components.length + ' components</span>')
+  if (ctx.pages.length) badges.push('<span class="ctx-badge">' + ctx.pages.length + ' pages</span>')
+  h += badges.join(' ')
+  h += '<br><span class="ctx-clear" id="ctxClear">コンテキストをクリア</span>'
+  h += '</div>'
+  return h
+}
+
+function doFetchContext() {
+  var input = $('figmaFileUrl').value.trim()
+  var token = $('figmaToken').value.trim()
+  if (!token) {
+    showCtxStatus('error', '✗ Figma PAT が未設定です。設定画面で入力してください')
+    return
+  }
+  var fileKey = parseFigmaFileKey(input)
+  if (!fileKey) {
+    showCtxStatus('error', '✗ 有効なFigma URLまたはFile Keyを入力してください')
+    return
+  }
+
+  $('btnFetch').disabled = true
+  showCtxStatus('', '取得中...')
+
+  Promise.all([
+    fetchFigmaFile(fileKey, token),
+    fetchFigmaStyles(fileKey, token),
+    fetchFigmaVariables(fileKey, token)
+  ]).then(function(results) {
+    externalContext = buildExternalContext(results[0], results[1], results[2])
+    $('btnFetch').disabled = false
+    showCtxStatus('ok', '✓ 取得完了')
+    $('ctxSummary').innerHTML = renderContextSummary(externalContext)
+    show($('ctxSummary'))
+    show($('ctxActiveBadge'))
+    // クリアボタン
+    var clearBtn = document.getElementById('ctxClear')
+    if (clearBtn) clearBtn.addEventListener('click', clearContext)
+  }).catch(function(e) {
+    $('btnFetch').disabled = false
+    showCtxStatus('error', '✗ ' + e.message)
+    externalContext = null
+    hide($('ctxActiveBadge'))
+  })
+}
+
+function clearContext() {
+  externalContext = null
+  hide($('ctxSummary'))
+  hide($('ctxActiveBadge'))
+  hide($('ctxStatus'))
+  $('figmaFileUrl').value = ''
+}
+
+function showCtxStatus(type, msg) {
+  var el = $('ctxStatus')
+  el.className = 'ctx-status' + (type ? ' ' + type : '')
+  el.textContent = msg
+  show(el)
+}
+
+// Toggle external context panel
+$('extCtxToggle').addEventListener('click', function() {
+  var body = $('extCtxBody'), arrow = $('extCtxArrow')
+  var isOpen = !body.classList.contains('collapsed')
+  if (isOpen) { body.classList.add('collapsed'); arrow.classList.remove('open') }
+  else { body.classList.remove('collapsed'); arrow.classList.add('open') }
+})
+$('btnFetch').addEventListener('click', doFetchContext)
+
+// ══════════════════════════════════════════════════════════════
 // AI API呼び出し
 // ══════════════════════════════════════════════════════════════
 function callAI(prompt) {
@@ -408,8 +688,13 @@ function renderPreview(spec) {
 // ══════════════════════════════════════════════════════════════
 function doGenerate() {
   var prompt = $('prompt').value.trim(); if (!prompt) return
+  // 外部コンテキストがある場合、プロンプトに付加
+  var fullPrompt = prompt
+  if (externalContext) {
+    fullPrompt = contextToPromptText(externalContext) + '\n\n---\n\nユーザーの要求:\n' + prompt
+  }
   $('btnRun').disabled = true; show($('status')); $('statusText').textContent = 'AIが構造を生成中...'
-  callAI(prompt).then(function(spec) {
+  callAI(fullPrompt).then(function(spec) {
     currentSpec = spec; renderPreview(spec); hide($('prompt')); show($('genPreview')); hide($('status')); updateBottomBar()
   }).catch(function(e) { hide($('status')); $('btnRun').disabled = false; addLog('genLog','error',e.message) })
 }

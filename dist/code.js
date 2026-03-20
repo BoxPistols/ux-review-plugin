@@ -417,8 +417,9 @@ figma.ui.onmessage = function(msg) {
     Promise.all([
       figma.clientStorage.getAsync("api_key"),
       figma.clientStorage.getAsync("model"),
+      figma.clientStorage.getAsync("figma_token"),
     ]).then(function(r) {
-      figma.ui.postMessage({ type: "settings-loaded", apiKey: r[0] || "", model: r[1] || "gemini-2.5-flash" });
+      figma.ui.postMessage({ type: "settings-loaded", apiKey: r[0] || "", model: r[1] || "gemini-2.5-flash", figmaToken: r[2] || "" });
     });
     // 初回選択通知
     notifySelection();
@@ -428,6 +429,7 @@ figma.ui.onmessage = function(msg) {
     Promise.all([
       figma.clientStorage.setAsync("api_key", msg.apiKey || ""),
       figma.clientStorage.setAsync("model", msg.model || "gemini-2.5-flash"),
+      figma.clientStorage.setAsync("figma_token", msg.figmaToken || ""),
     ]);
   }
 };
