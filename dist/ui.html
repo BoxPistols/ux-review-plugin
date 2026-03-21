@@ -214,7 +214,10 @@ html, body {
 .hist-score.low { color: var(--red); }
 .hist-name { font-size: 13px; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hist-date { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
-.hist-summary { font-size: 12px; color: var(--text-sub); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hist-summary { font-size: 12px; color: var(--text-sub); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: all 0.2s; }
+.hist-item.expanded .hist-summary { -webkit-line-clamp: unset; display: block; }
+.hist-tobe { font-size: 12px; color: var(--green); line-height: 1.6; margin-top: 8px; display: none; }
+.hist-item.expanded .hist-tobe { display: block; }
 .hist-del { background: none; border: none; color: var(--text-dim); font-size: 14px; cursor: pointer; padding: 2px 6px; line-height: 1; }
 .hist-del:hover { color: var(--red); }
 
@@ -295,6 +298,13 @@ html, body {
 }
 .btn-danger:hover:not(:disabled) { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.15); }
 
+/* ── Resize ── */
+.resize-grip {
+  position: fixed; bottom: 0; right: 0; width: 16px; height: 16px;
+  cursor: nwse-resize; z-index: 200; opacity: 0.2; transition: opacity 0.15s;
+  display: flex; align-items: flex-end; justify-content: flex-end; padding: 3px;
+}
+.resize-grip:hover { opacity: 0.6; }
 .hidden { display: none !important; }
 </style>
 </head>
@@ -308,6 +318,9 @@ html, body {
       UX Review<span>.</span>AI
     </span>
     <div class="hdr-right">
+      <button class="icon-btn" id="btnExpand" title="拡大/縮小">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
       <button class="icon-btn" id="btnSettings" title="設定">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.7 1h2.6l.4 1.6a4.5 4.5 0 011.1.6l1.6-.5 1.3 2.2-1.2 1.1a4.6 4.6 0 010 1.2l1.2 1.1-1.3 2.2-1.6-.5a4.5 4.5 0 01-1.1.6L8.3 13H5.7l-.4-1.6a4.5 4.5 0 01-1.1-.6l-1.6.5-1.3-2.2 1.2-1.1a4.6 4.6 0 010-1.2L1.3 5.7l1.3-2.2 1.6.5a4.5 4.5 0 011.1-.6L5.7 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.2"/></svg>
       </button>
@@ -402,20 +415,22 @@ html, body {
 
   <!-- Bottom bar -->
   <div class="bottom-bar">
-    <div class="status hidden" id="status"><span class="spinner"></span><span id="statusText">処理中...</span></div>
-    <!-- Review actions -->
+    <!-- Review actions (独立) -->
+    <div class="status hidden" id="statusReview"><span class="spinner"></span><span id="statusReviewText">分析中...</span></div>
     <div class="btn-row hidden" id="actReview"><button class="btn btn-primary" id="btnReview">Review & Improve</button></div>
     <div class="btn-row hidden" id="actReviewConfirm">
       <button class="btn btn-secondary" id="btnReviewCancel">キャンセル</button>
       <button class="btn btn-primary" id="btnReviewConfirm2">To-Beを生成</button>
     </div>
-    <!-- Generate actions -->
+    <!-- Generate actions (独立) -->
+    <div class="status hidden" id="statusGen"><span class="spinner"></span><span id="statusGenText">生成中...</span></div>
     <div class="btn-row hidden" id="actGenInput"><button class="btn btn-primary" id="btnRun">生成 →</button></div>
     <div class="btn-row hidden" id="actGenPreview">
       <button class="btn btn-secondary" id="btnCancel">キャンセル</button>
       <button class="btn btn-primary" id="btnConfirm">確定して生成</button>
     </div>
-    <!-- Tokens actions -->
+    <!-- Tokens actions (独立) -->
+    <div class="status hidden" id="statusTokens"><span class="spinner"></span>インポート中...</div>
     <div class="btn-row hidden" id="actTokens"><button class="btn btn-primary" id="btnImport">Import →</button></div>
     <!-- Undo (shared) -->
     <div class="btn-row hidden" id="actUndo">
@@ -423,6 +438,10 @@ html, body {
       <button class="btn btn-danger" id="btnUndoAll" style="font-size:12px">全Undo</button>
     </div>
   </div>
+</div>
+
+<div class="resize-grip" id="resizeGrip">
+  <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M7 1L1 7M4 1L1 4M7 4L4 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
 </div>
 
 <script>
@@ -451,16 +470,29 @@ document.querySelectorAll('.tab').forEach(function(t) {
 
 var currentReview = null
 var selectedNodes = []
+var reviewLoading = false
+var genLoading = false
 
 function updateBottomBar() {
-  hide($('actReview')); hide($('actReviewConfirm')); hide($('actGenInput')); hide($('actGenPreview')); hide($('actTokens'))
+  // 全非表示
+  hide($('statusReview')); hide($('actReview')); hide($('actReviewConfirm'))
+  hide($('statusGen')); hide($('actGenInput')); hide($('actGenPreview'))
+  hide($('statusTokens')); hide($('actTokens'))
+
+  // Review（他タブでも裏で処理中ならスピナー表示可能）
   if (currentTab === 'review') {
-    if (currentReview) show($('actReviewConfirm')); else if (selectedNodes.length) show($('actReview'))
+    if (reviewLoading) { show($('statusReview')) }
+    else if (currentReview) { show($('actReviewConfirm')); show($('actReview')) }
+    else if (selectedNodes.length) { show($('actReview')) }
   }
+  // Generate
   if (currentTab === 'generate') {
-    if (currentSpec) show($('actGenPreview')); else show($('actGenInput'))
+    if (genLoading) { show($('statusGen')) }
+    else if (currentSpec) { show($('actGenPreview')) }
+    else { show($('actGenInput')) }
   }
-  if (currentTab === 'tokens') show($('actTokens'))
+  // Tokens
+  if (currentTab === 'tokens') { show($('actTokens')) }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -529,44 +561,40 @@ window.onmessage = function(event) {
 
   // Review result
   if (msg.type === 'review-applied') {
-    hide($('status'))
+    reviewLoading = false; updateBottomBar()
     addLog('reviewLog', 'ok', '✓ To-Be生成完了 (' + msg.applied + '件適用)')
-    updateBottomBar()
     if (msg.undoCount > 0) show($('actUndo'))
   }
   if (msg.type === 'tobe-done') {
-    hide($('status'))
+    reviewLoading = false; updateBottomBar()
     addLog('reviewLog', 'ok', '✓ To-Be UIをキャンバスに生成しました')
-    // レビュー結果は画面に残す（currentReview をクリアしない）
-    updateBottomBar()
     if (msg.undoCount > 0) show($('actUndo'))
   }
   if (msg.type === 'review-error') {
-    hide($('status'))
+    reviewLoading = false; currentReview = null; updateBottomBar()
     addLog('reviewLog', 'error', msg.error)
-    currentReview = null; updateBottomBar()
   }
 
   // Generate
   if (msg.type === 'done') {
-    hide($('status')); $('btnRun').disabled = false; currentSpec = null; updateBottomBar()
+    genLoading = false; $('btnRun').disabled = false; currentSpec = null; updateBottomBar()
     addLog('genLog', 'ok', '✓ ' + (msg.summary || '生成完了'))
     if (msg.undoCount > 0) show($('actUndo'))
   }
   if (msg.type === 'error') {
-    hide($('status')); $('btnRun').disabled = false; currentSpec = null; updateBottomBar()
+    genLoading = false; $('btnRun').disabled = false; currentSpec = null; updateBottomBar()
     addLog('genLog', 'error', msg.error)
   }
 
   // Tokens
   if (msg.type === 'import-done') {
-    hide($('status'))
+    hide($('statusTokens'))
     addLog('tokenLog', 'ok', '✓ ' + msg.collections + ' collections, ' + msg.variables + ' variables')
     if (msg.undoCount > 0) show($('actUndo'))
     parent.postMessage({ pluginMessage: { type: 'list-collections' } }, '*')
   }
   if (msg.type === 'import-error') {
-    hide($('status'))
+    hide($('statusTokens'))
     addLog('tokenLog', 'error', msg.error)
   }
 
@@ -692,7 +720,7 @@ var REVIEW_PROMPT = [
 '元にあるカード・ボタン・テキストを勝手に削除したり、内容を変えないでください。',
 '',
 '出力形式(JSONのみ):',
-'{"asIs":"現状分析(日本語)","toBe":"改善方針(日本語)","score":1-100,',
+'{"asIs":"現状の問題点を3-5文で","toBe":"改善方針を3-5文で","score":1-100,',
 '"toBeFrame":{"name":"画面名","type":"FRAME","width":元と同じ幅,"fill":"#FFFFFF","layoutMode":"VERTICAL","padding":24,"itemSpacing":16,"counterAxisSizingMode":"FIXED","children":[...]}}',
 '',
 '━━━ 構造テンプレート（必ずこの形で出力）━━━',
@@ -742,7 +770,7 @@ var REVIEW_PROMPT = [
 function doReviewImprove() {
   if (!selectedNodes.length) return
   hide($('reviewEmpty'))
-  show($('status')); $('statusText').textContent = 'AIがデザインを分析中...'
+  reviewLoading = true; $('statusReviewText').textContent = 'AIがデザインを分析中...'; updateBottomBar()
   $('btnReview').disabled = true
 
   var text = ''
@@ -753,7 +781,7 @@ function doReviewImprove() {
   }
 
   var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
-  if (!apiKey) { hide($('status')); $('btnReview').disabled = false; addLog('reviewLog','error','APIキーを設定してください'); return }
+  if (!apiKey) { reviewLoading = false; updateBottomBar(); $('btnReview').disabled = false; addLog('reviewLog','error','APIキーを設定してください'); return }
 
   var p
   if (isGemini(model)) {
@@ -774,7 +802,7 @@ function doReviewImprove() {
     var result = JSON.parse(c)
     currentReview = result
     renderReviewPreview(result)
-    hide($('status')); $('btnReview').disabled = false; updateBottomBar()
+    reviewLoading = false; $('btnReview').disabled = false; updateBottomBar()
 
     // 履歴に自動保存
     var frameName = selectedNodes.length ? selectedNodes[0].name : 'Unknown'
@@ -787,7 +815,7 @@ function doReviewImprove() {
       toBe: result.toBe,
     }}}, '*')
   }).catch(function(e) {
-    hide($('status')); $('btnReview').disabled = false
+    reviewLoading = false; updateBottomBar(); $('btnReview').disabled = false
     addLog('reviewLog', 'error', e.message)
   })
 }
@@ -833,7 +861,7 @@ function renderReviewPreview(r) {
 function doReviewConfirm() {
   if (!currentReview) return
 
-  show($('status')); $('statusText').textContent = 'To-Be UIを生成中...'
+  reviewLoading = true; $('statusReviewText').textContent = 'To-Be UIを生成中...'; updateBottomBar()
 
   // toBeFrame がある場合は新規フレーム生成
   if (currentReview.toBeFrame) {
@@ -875,21 +903,23 @@ function renderReviewHistory(history) {
     h += '<span class="hist-date">' + dateStr + '</span>'
     h += '<button class="hist-del" data-del="' + e.id + '" title="削除">×</button>'
     h += '</div>'
-    h += '<div class="hist-summary">' + (e.asIs || '').slice(0, 100) + '</div>'
+    h += '<div class="hist-summary">' + (e.asIs || '') + '</div>'
+    if (e.toBe) h += '<div class="hist-tobe">改善方針: ' + e.toBe + '</div>'
     h += '</div>'
   }
   $('reviewHistoryList').innerHTML = h
 }
 
-// 履歴クリック → 詳細表示
+// 履歴クリック → 展開/折畳
 $('reviewHistoryList').addEventListener('click', function(ev) {
-  // 削除ボタン
   var delBtn = ev.target.closest('[data-del]')
   if (delBtn) {
     ev.stopPropagation()
     parent.postMessage({ pluginMessage: { type: 'delete-review', id: delBtn.getAttribute('data-del') } }, '*')
     return
   }
+  var item = ev.target.closest('.hist-item')
+  if (item) item.classList.toggle('expanded')
 })
 
 $('btnClearHistory').addEventListener('click', function() {
@@ -931,14 +961,14 @@ function renderPreview(spec) {
 // ══════════════════════════════════════════════════════════════
 function doGenerate() {
   var prompt = $('prompt').value.trim(); if (!prompt) return
-  $('btnRun').disabled = true; show($('status')); $('statusText').textContent = 'AIが構造を生成中...'
+  $('btnRun').disabled = true; genLoading = true; $('statusGenText').textContent = 'AIが構造を生成中...'; updateBottomBar()
   callAI(prompt).then(function(spec) {
-    currentSpec = spec; renderPreview(spec); hide($('prompt')); show($('genPreview')); hide($('status')); updateBottomBar()
-  }).catch(function(e) { hide($('status')); $('btnRun').disabled = false; addLog('genLog','error',e.message) })
+    currentSpec = spec; renderPreview(spec); hide($('prompt')); show($('genPreview')); genLoading = false; updateBottomBar()
+  }).catch(function(e) { genLoading = false; updateBottomBar(); $('btnRun').disabled = false; addLog('genLog','error',e.message) })
 }
 function doConfirm() {
   if (!currentSpec) return
-  show($('status')); $('statusText').textContent = 'Figmaに反映中...'
+  genLoading = true; $('statusGenText').textContent = 'Figmaに反映中...'; updateBottomBar()
   parent.postMessage({ pluginMessage: { type: 'generate', spec: currentSpec } }, '*')
   currentSpec = null; show($('prompt')); hide($('genPreview')); updateBottomBar()
 }
@@ -949,7 +979,7 @@ function doCancel() { currentSpec = null; show($('prompt')); hide($('genPreview'
 // ══════════════════════════════════════════════════════════════
 function doImportTokens() {
   var json = $('tokenJson').value.trim(); if (!json) return
-  show($('status')); $('statusText').textContent = 'トークンをインポート中...'
+  show($('statusTokens'))
   parent.postMessage({ pluginMessage: { type: 'import-tokens', json: json } }, '*')
 }
 
@@ -1009,6 +1039,25 @@ document.addEventListener('keydown', function(e) {
     if (currentTab === 'tokens') doImportTokens()
   }
 })
+
+// ══════════════════════════════════════════════════════════════
+// リサイズ
+// ══════════════════════════════════════════════════════════════
+var isExpanded = false
+function postResize(w, h) {
+  parent.postMessage({ pluginMessage: { type: 'resize', width: Math.round(w), height: Math.round(h) } }, '*')
+}
+$('btnExpand').addEventListener('click', function() {
+  isExpanded = !isExpanded
+  var sz = isExpanded ? { w: 640, h: 800 } : { w: 480, h: 680 }
+  postResize(sz.w, sz.h)
+})
+;(function() {
+  var g = $('resizeGrip'), drag = false, sx, sy, sw, sh
+  g.addEventListener('mousedown', function(e) { drag = true; sx = e.clientX; sy = e.clientY; sw = window.innerWidth; sh = window.innerHeight; e.preventDefault() })
+  window.addEventListener('mousemove', function(e) { if (!drag) return; postResize(Math.max(380, sw + e.clientX - sx), Math.max(400, sh + e.clientY - sy)) })
+  window.addEventListener('mouseup', function() { drag = false })
+})()
 
 // 初期表示
 updateBottomBar()

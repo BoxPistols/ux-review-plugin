@@ -836,6 +836,13 @@ figma.ui.onmessage = function(msg) {
     notifySelection();
   }
 
+  if (msg.type === "resize") {
+    figma.ui.resize(
+      Math.min(Math.max(msg.width, 380), 1200),
+      Math.min(Math.max(msg.height, 400), 1000)
+    );
+  }
+
   if (msg.type === "save-settings") {
     Promise.all([
       figma.clientStorage.setAsync("api_key", msg.apiKey || ""),
