@@ -161,6 +161,37 @@ function extractComponentSetInfo(cs) {
 figma.on("selectionchange", notifySelection);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [Manage] コレクション管理
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function listCollections() {
+  var collections = figma.variables.getLocalVariableCollections();
+  var result = [];
+  for (var i = 0; i < collections.length; i++) {
+    var c = collections[i];
+    result.push({ id: c.id, name: c.name, variableCount: c.variableIds.length, modes: c.modes.length });
+  }
+  return result;
+}
+
+function clearAllCollections(onlyPluginCreated) {
+  var collections = figma.variables.getLocalVariableCollections();
+  var count = 0;
+  for (var i = 0; i < collections.length; i++) {
+    if (onlyPluginCreated && pluginCreatedCollections.indexOf(collections[i].id) === -1) continue;
+    var vars = collections[i].variableIds;
+    for (var j = 0; j < vars.length; j++) {
+      try { var v = figma.variables.getVariableById(vars[j]); if (v) v.remove(); count++; } catch(e){}
+    }
+    var cid = collections[i].id;
+    try { collections[i].remove(); count++; } catch(e){}
+    var idx = pluginCreatedCollections.indexOf(cid);
+    if (idx !== -1) pluginCreatedCollections.splice(idx, 1);
+  }
+  savePluginCollections();
+  return count;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // メッセージハンドラ
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 figma.ui.onmessage = function(msg) {

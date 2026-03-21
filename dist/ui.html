@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -28,7 +28,7 @@
   --red-soft: rgba(248,113,113,0.10);
   --yellow: #fbbf24;
   --yellow-soft: rgba(251,191,36,0.10);
-  --font: 'DM Sans', -apple-system, sans-serif;
+  --font: 'Noto Sans JP', -apple-system, sans-serif;
   --mono: 'JetBrains Mono', 'SF Mono', monospace;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -202,8 +202,8 @@ html, body {
 }
 .review-label.asis { color: var(--yellow); }
 .review-label.tobe { color: var(--green); }
-.review-text { font-size: 13px; color: var(--text-sub); line-height: 1.8; }
-.review-text p { margin-bottom: 8px; }
+.review-text { font-size: 13px; color: var(--text-sub); line-height: 1.9; letter-spacing: 0.02em; }
+.review-text p { margin-bottom: 12px; }
 .review-text p:last-child { margin-bottom: 0; }
 .review-score {
   font-size: 42px; font-family: var(--mono); font-weight: 700; text-align: center;
@@ -217,9 +217,9 @@ html, body {
 .mod-list { display: flex; flex-direction: column; gap: 0; }
 .mod-item {
   font-size: 13px; color: var(--text-sub);
-  padding: 10px 4px; border-bottom: 1px solid var(--border);
-  line-height: 1.6; cursor: pointer; transition: background 0.15s;
-  margin: 0 -4px;
+  padding: 12px 8px; border-bottom: 1px solid var(--border);
+  line-height: 1.85; letter-spacing: 0.02em; cursor: pointer; transition: background 0.15s;
+  margin: 0 -8px;
 }
 .mod-item:hover { background: var(--surface-hi); }
 .mod-item:last-child { border-bottom: none; }
@@ -239,9 +239,25 @@ html, body {
 .r-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 
 /* ── Chat ── */
-.chat-msg { font-size: 13px; line-height: 1.65; padding: 8px 12px; border-radius: 8px; max-width: 90%; }
-.chat-msg.user { background: var(--accent-soft); color: var(--text); align-self: flex-end; }
-.chat-msg.ai { background: var(--surface); color: var(--text-sub); align-self: flex-start; border: 1px solid var(--border); }
+.chat-section { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px; }
+.chat-messages { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.chat-messages::-webkit-scrollbar { width: 3px; }
+.chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+.chat-msg { font-size: 13px; line-height: 1.85; padding: 10px 14px; border-radius: 12px; max-width: 88%; letter-spacing: 0.02em; }
+.chat-msg.user { background: var(--accent-soft); color: var(--text); align-self: flex-end; border-bottom-right-radius: 4px; }
+.chat-msg.ai { background: var(--surface); color: var(--text-sub); align-self: flex-start; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.chat-input-row { display: flex; gap: 8px; margin-top: 8px; }
+.chat-input {
+  flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 12px; font-size: 13px; color: var(--text); outline: none; font-family: var(--font);
+}
+.chat-input:focus { border-color: var(--accent); }
+.chat-input::placeholder { color: var(--text-dim); }
+.chat-send {
+  padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font); white-space: nowrap;
+}
+.chat-send:hover { opacity: 0.88; }
 
 /* ── Copy button (per section) ── */
 .copy-btn {
@@ -446,12 +462,12 @@ html, body {
         <div id="reviewHistoryList"></div>
       </div>
       <!-- チャット -->
-      <div class="hidden" id="chatSection">
-        <div class="section-title">チャット</div>
-        <div id="chatMessages" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
-        <div style="display:flex;gap:6px;margin-top:6px">
-          <input class="ctx-input" id="chatInput" placeholder="デザインについて質問..." style="flex:1;width:auto" />
-          <button class="copy-btn" id="btnChat" style="padding:4px 12px">送信</button>
+      <div class="hidden chat-section" id="chatSection">
+        <div class="section-title">チャット — レビュー内容について質問</div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chatInput" placeholder="この指摘について詳しく / エンジニアへの伝え方 / 代替案は？" />
+          <button class="chat-send" id="btnChat">送信</button>
         </div>
       </div>
       <div class="log" id="reviewLog"></div>
@@ -828,15 +844,21 @@ function doReviewImprove() {
 // 文章を句点で分割し段落化
 function textToParagraphs(text) {
   if (!text) return ''
-  // 句点「。」で分割して段落に
-  var sentences = text.split(/(?<=。)/)
+  // 「なぜ問題か：」「どう直すか：」等のキーワードで改行
+  var formatted = esc(text)
+    .replace(/(なぜ問題か[：:])/g, '</p><p><strong>$1</strong>')
+    .replace(/(どう直すか[：:])/g, '</p><p><strong>$1</strong>')
+    .replace(/(直さないと何が起きるか[：:])/g, '</p><p><strong>$1</strong>')
+    .replace(/(判断基準[：:])/g, '</p><p><strong>$1</strong>')
+    .replace(/(根拠[：:])/g, '</p><p><strong>$1</strong>')
+  // 句点で段落分け
+  var sentences = formatted.split(/(?<=。)/)
   var paragraphs = []
   var current = ''
   for (var i = 0; i < sentences.length; i++) {
     current += sentences[i]
-    // 2文ごと、または最後の文で段落を切る
     if ((i + 1) % 2 === 0 || i === sentences.length - 1) {
-      if (current.trim()) paragraphs.push('<p>' + esc(current.trim()) + '</p>')
+      if (current.trim()) paragraphs.push('<p>' + current.trim() + '</p>')
       current = ''
     }
   }
@@ -937,6 +959,49 @@ $('reviewPreview').addEventListener('click', function(ev) {
 })
 
 // Review結果をクリア（新しいレビュー実行時に自動クリア）
+
+// ══════════════════════════════════════════════════════════════
+// Review: 履歴表示
+// ══════════════════════════════════════════════════════════════
+function renderReviewHistory(history) {
+  if (!history.length) { hide($('reviewHistorySection')); return }
+  show($('reviewHistorySection'))
+  var h = ''
+  for (var i = 0; i < history.length; i++) {
+    var e = history[i]
+    var scoreClass = e.score >= 75 ? 'high' : e.score >= 50 ? 'mid' : 'low'
+    var d = new Date(e.timestamp)
+    var dateStr = (d.getMonth()+1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + ('0'+d.getMinutes()).slice(-2)
+    h += '<div class="hist-item" data-id="' + e.id + '">'
+    h += '<div class="hist-head">'
+    h += '<span class="hist-score ' + scoreClass + '">' + e.score + '</span>'
+    h += '<span class="hist-name">' + esc(e.frameName) + '</span>'
+    h += '<span class="hist-date">' + dateStr + '</span>'
+    h += '<button class="hist-del" data-del="' + e.id + '" title="削除">×</button>'
+    h += '</div>'
+    h += '<div class="hist-summary">' + esc(e.asIs || '') + '</div>'
+    if (e.toBe) h += '<div class="hist-tobe">' + esc(e.toBe) + '</div>'
+    h += '</div>'
+  }
+  $('reviewHistoryList').innerHTML = h
+}
+
+$('reviewHistoryList').addEventListener('click', function(ev) {
+  var delBtn = ev.target.closest('[data-del]')
+  if (delBtn) {
+    ev.stopPropagation()
+    parent.postMessage({ pluginMessage: { type: 'delete-review', id: delBtn.getAttribute('data-del') } }, '*')
+    return
+  }
+  var item = ev.target.closest('.hist-item')
+  if (item) item.classList.toggle('expanded')
+})
+
+$('btnClearHistory').addEventListener('click', function() {
+  if (confirm('レビュー履歴を全て削除しますか？')) {
+    parent.postMessage({ pluginMessage: { type: 'clear-review-history' } }, '*')
+  }
+})
 
 // ══════════════════════════════════════════════════════════════
 // Manage: コレクション一覧
