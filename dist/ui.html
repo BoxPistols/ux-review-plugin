@@ -379,13 +379,6 @@ html, body {
 }
 .img-drop:hover, .img-drop.dragover { border-color: var(--accent); }
 
-/* ── Resize ── */
-.resize-grip {
-  position: fixed; bottom: 0; right: 0; width: 16px; height: 16px;
-  cursor: nwse-resize; z-index: 200; opacity: 0.2; transition: opacity 0.15s;
-  display: flex; align-items: flex-end; justify-content: flex-end; padding: 3px;
-}
-.resize-grip:hover { opacity: 0.6; }
 .hidden { display: none !important; }
 </style>
 </head>
@@ -569,9 +562,6 @@ html, body {
   </div>
 </div>
 
-<div class="resize-grip" id="resizeGrip">
-  <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M7 1L1 7M4 1L1 4M7 4L4 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-</div>
 
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -1585,12 +1575,6 @@ $('btnExpand').addEventListener('click', function() {
     postResize(480, 680)
   }
 })
-;(function() {
-  var g = $('resizeGrip'), drag = false, sx, sy, sw, sh
-  g.addEventListener('mousedown', function(e) { drag = true; sx = e.clientX; sy = e.clientY; sw = window.innerWidth; sh = window.innerHeight; e.preventDefault() })
-  window.addEventListener('mousemove', function(e) { if (!drag) return; postResize(Math.max(380, sw + e.clientX - sx), Math.max(400, sh + e.clientY - sy)) })
-  window.addEventListener('mouseup', function() { drag = false })
-})()
 
 // ══════════════════════════════════════════════════════════════
 // チャット（レビュー結果について対話）
