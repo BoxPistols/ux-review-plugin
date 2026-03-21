@@ -307,6 +307,29 @@ html, body {
 }
 .btn-danger:hover:not(:disabled) { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.15); }
 
+/* ── Context panel ── */
+.ctx-toggle {
+  padding: 6px 16px; font-size: 12px; color: var(--text-dim); cursor: pointer;
+  border-bottom: 1px solid var(--border); user-select: none; transition: color 0.15s;
+}
+.ctx-toggle:hover { color: var(--text-sub); }
+.ctx-toggle.open { color: var(--text-sub); }
+.ctx-panel { padding: 8px 16px 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; animation: slideDown 0.2s var(--ease); }
+.ctx-panel.hidden { display: none; }
+.ctx-row { display: flex; gap: 8px; align-items: center; }
+.ctx-label { font-size: 12px; font-weight: 600; color: var(--text-dim); width: 44px; flex-shrink: 0; }
+.ctx-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: var(--text); outline: none; font-family: var(--font); min-width: 0; }
+.ctx-input:focus { border-color: var(--accent); }
+.ctx-input::placeholder { color: var(--text-dim); }
+
+/* ── Image drop zone ── */
+.img-drop {
+  flex: 1; min-height: 120px; border: 2px dashed var(--border); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: border-color 0.2s;
+}
+.img-drop:hover, .img-drop.dragover { border-color: var(--accent); }
+
 /* ── Resize ── */
 .resize-grip {
   position: fixed; bottom: 0; right: 0; width: 16px; height: 16px;
@@ -392,14 +415,33 @@ html, body {
   <div class="tab-panel" id="panel-generate">
     <div class="sub-tabs">
       <span class="sub-tab active" data-gen="prompt">自然言語</span>
+      <span class="sub-tab" data-gen="image">Image</span>
       <span class="sub-tab" data-gen="code">Code</span>
       <span class="sub-tab" data-gen="history">履歴</span>
+    </div>
+    <!-- Context（全モード共通、折畳み） -->
+    <div class="ctx-toggle" id="ctxToggle">Context（5W1H）▾</div>
+    <div class="ctx-panel hidden" id="ctxPanel">
+      <div class="ctx-row"><span class="ctx-label">What</span><input class="ctx-input" id="ctxWhat" placeholder="何を作るか（例: SaaS管理画面のダッシュボード）" /></div>
+      <div class="ctx-row"><span class="ctx-label">Who</span><input class="ctx-input" id="ctxWho" placeholder="誰が使うか（例: 40-55歳の現場作業者）" /></div>
+      <div class="ctx-row"><span class="ctx-label">Why</span><input class="ctx-input" id="ctxWhy" placeholder="ビジネス目的（例: 操作時間を50%削減）" /></div>
+      <div class="ctx-row"><span class="ctx-label">Where</span><input class="ctx-input" id="ctxWhere" placeholder="プラットフォーム（例: デスクトップWeb / iPad）" /></div>
+      <div class="ctx-row"><span class="ctx-label">Stack</span><input class="ctx-input" id="ctxStack" placeholder="技術スタック（例: React, MUI v5, TypeScript）" /></div>
     </div>
     <div class="panel-body" style="padding-bottom:0">
       <!-- 自然言語モード -->
       <textarea class="prompt" id="prompt" placeholder="作りたいUIを自然言語で記述...&#10;&#10;例: ボタンのバリアントセット（Primary/Secondary × S/M/L）&#10;例: カード一覧画面&#10;例: SaaS向けデザイントークン"></textarea>
+      <!-- Imageモード -->
+      <div class="hidden" id="imageArea" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:0">
+        <div class="img-drop" id="imgDrop">
+          <div style="text-align:center;color:var(--text-dim)">画像をドラッグ＆ドロップ、またはクリックして選択</div>
+          <input type="file" id="imgFile" accept="image/*" style="display:none" />
+        </div>
+        <img id="imgPreviewEl" class="hidden" style="max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border)" />
+        <textarea class="prompt" id="imgPrompt" style="flex:0;min-height:60px" placeholder="画像に対する指示（例: このUIをFigmaコンポーネントとして再現して）"></textarea>
+      </div>
       <!-- Codeモード -->
-      <textarea class="json-input hidden" id="codeInput" placeholder="React / HTML / Tailwind コードを貼り付け...&#10;&#10;例:&#10;<div className=&quot;p-6 bg-white rounded-xl&quot;>&#10;  <h1 className=&quot;text-2xl font-bold&quot;>カード一覧</h1>&#10;  <button className=&quot;bg-blue-600 text-white px-6 py-3 rounded-lg&quot;>&#10;    新規作成&#10;  </button>&#10;</div>"></textarea>
+      <textarea class="json-input hidden" id="codeInput" placeholder="React / HTML / Tailwind コードを貼り付け..."></textarea>
       <!-- 履歴モード -->
       <div class="hidden" id="genHistoryArea" style="flex:1;overflow-y:auto"></div>
       <!-- 共通 -->
@@ -721,6 +763,49 @@ function callAI(prompt) {
   return p.then(function(c) { if(!c) throw new Error('空の応答'); try{return JSON.parse(c)}catch(e){ var m=c.match(/```(?:json)?\s*([\s\S]*?)\s*```/); if(m)return JSON.parse(m[1]); throw new Error('JSON解析失敗') } })
 }
 
+// 画像付きAI呼び出し（Vision API）
+function callAIWithImage(systemPrompt, userText, dataUrl) {
+  var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
+  if (!apiKey) return Promise.reject(new Error('APIキーを設定してください'))
+
+  // data:image/png;base64,xxxx → mimeType と base64 を分離
+  var parts = dataUrl.split(',')
+  var mimeMatch = parts[0].match(/data:(.*?);/)
+  var mimeType = mimeMatch ? mimeMatch[1] : 'image/png'
+  var base64Data = parts[1]
+
+  var p
+  if (isGemini(model)) {
+    p = fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        system_instruction:{parts:[{text:systemPrompt}]},
+        contents:[{parts:[{text:userText},{inlineData:{mimeType:mimeType,data:base64Data}}]}],
+        generationConfig:{response_mime_type:'application/json',temperature:0.5}
+      })
+    }).then(function(r) { if(!r.ok) { if(r.status===429) throw new Error('レート制限。OpenAIに切り替えてください'); return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'Gemini error '+r.status)}) } return r.json() })
+     .then(function(d) { return d.candidates[0].content.parts[0].text })
+  } else {
+    p = fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      body:JSON.stringify({
+        model:model,
+        messages:[
+          {role:'system',content:systemPrompt},
+          {role:'user',content:[
+            {type:'text',text:userText},
+            {type:'image_url',image_url:{url:dataUrl,detail:'high'}}
+          ]}
+        ],
+        response_format:{type:'json_object'},
+        max_completion_tokens:8000
+      })
+    }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'OpenAI error')}); return r.json() })
+     .then(function(d) { return d.choices[0].message.content })
+  }
+  return p.then(function(c) { if(!c) throw new Error('空の応答'); try{return JSON.parse(c)}catch(e){ var m=c.match(/```(?:json)?\s*([\s\S]*?)\s*```/); if(m)return JSON.parse(m[1]); throw new Error('JSON解析失敗') } })
+}
+
 // カスタムプロンプト版
 function callAIWithPrompt(systemPrompt, userContent) {
   var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
@@ -1005,17 +1090,56 @@ function renderPreview(spec) {
 // ══════════════════════════════════════════════════════════════
 var genMode = 'prompt' // 'prompt' | 'code' | 'history'
 
+var imgBase64 = null
+
 document.querySelectorAll('.sub-tab').forEach(function(t) {
   t.addEventListener('click', function() {
     genMode = t.getAttribute('data-gen')
     document.querySelectorAll('.sub-tab').forEach(function(s) { s.classList.toggle('active', s.getAttribute('data-gen') === genMode) })
-    hide($('prompt')); hide($('codeInput')); hide($('genHistoryArea')); hide($('genPreview'))
+    hide($('prompt')); hide($('codeInput')); hide($('genHistoryArea')); hide($('genPreview')); hide($('imageArea'))
     if (genMode === 'prompt') show($('prompt'))
+    if (genMode === 'image') show($('imageArea'))
     if (genMode === 'code') show($('codeInput'))
     if (genMode === 'history') { show($('genHistoryArea')); parent.postMessage({ pluginMessage: { type: 'load-gen-history' } }, '*') }
     currentSpec = null; updateBottomBar()
   })
 })
+
+// Context折畳み
+$('ctxToggle').addEventListener('click', function() {
+  $('ctxPanel').classList.toggle('hidden')
+  $('ctxToggle').classList.toggle('open')
+  $('ctxToggle').textContent = $('ctxPanel').classList.contains('hidden') ? 'Context（5W1H）▾' : 'Context（5W1H）▴'
+})
+
+// 画像ドロップ/選択
+$('imgDrop').addEventListener('click', function() { $('imgFile').click() })
+$('imgDrop').addEventListener('dragover', function(e) { e.preventDefault(); $('imgDrop').classList.add('dragover') })
+$('imgDrop').addEventListener('dragleave', function() { $('imgDrop').classList.remove('dragover') })
+$('imgDrop').addEventListener('drop', function(e) { e.preventDefault(); $('imgDrop').classList.remove('dragover'); if (e.dataTransfer.files.length) loadImage(e.dataTransfer.files[0]) })
+$('imgFile').addEventListener('change', function(e) { if (e.target.files.length) loadImage(e.target.files[0]) })
+
+function loadImage(file) {
+  if (!file.type.startsWith('image/')) return
+  var reader = new FileReader()
+  reader.onload = function(e) {
+    imgBase64 = e.target.result // data:image/...;base64,...
+    $('imgPreviewEl').src = imgBase64
+    show($('imgPreviewEl'))
+    $('imgDrop').style.display = 'none'
+  }
+  reader.readAsDataURL(file)
+}
+
+function getContextString() {
+  var parts = []
+  var w = $('ctxWhat').value.trim(); if (w) parts.push('What: ' + w)
+  var who = $('ctxWho').value.trim(); if (who) parts.push('Who: ' + who)
+  var why = $('ctxWhy').value.trim(); if (why) parts.push('Why: ' + why)
+  var where = $('ctxWhere').value.trim(); if (where) parts.push('Where: ' + where)
+  var stack = $('ctxStack').value.trim(); if (stack) parts.push('Stack: ' + stack)
+  return parts.length ? '\n\n【ビジネスコンテキスト】\n' + parts.join('\n') : ''
+}
 
 // ══════════════════════════════════════════════════════════════
 // Generate: 履歴表示
@@ -1118,14 +1242,21 @@ var CODE_TO_FIGMA_PROMPT = [
 // Generate: アクション
 // ══════════════════════════════════════════════════════════════
 function doGenerate() {
-  var input, promptText
-  if (genMode === 'code') {
+  var input, promptText, imageData = null
+  if (genMode === 'image') {
+    if (!imgBase64) { addLog('genLog', 'error', '画像を選択してください'); return }
+    input = ($('imgPrompt').value.trim() || 'このUIをFigmaコンポーネントとして再現してください') + getContextString()
+    imageData = imgBase64
+    promptText = null
+  } else if (genMode === 'code') {
     input = $('codeInput').value.trim()
     if (!input) return
+    input += getContextString()
     promptText = CODE_TO_FIGMA_PROMPT
   } else {
     input = $('prompt').value.trim()
     if (!input) return
+    input += getContextString()
     promptText = null
   }
 
@@ -1146,7 +1277,9 @@ function doGenerate() {
   updateBottomBar()
 
   var p
-  if (promptText) {
+  if (imageData) {
+    p = callAIWithImage(SYSTEM_PROMPT, input, imageData)
+  } else if (promptText) {
     p = callAIWithPrompt(promptText, input)
   } else {
     p = callAI(input)
@@ -1155,7 +1288,7 @@ function doGenerate() {
   p.then(function(spec) {
     currentSpec = spec
     renderPreview(spec)
-    hide($('prompt')); hide($('codeInput')); show($('genPreview'))
+    hide($('prompt')); hide($('codeInput')); hide($('imageArea')); show($('genPreview'))
     genLoading = false; updateBottomBar()
   }).catch(function(e) {
     genLoading = false; updateBottomBar(); $('btnRun').disabled = false
@@ -1190,13 +1323,17 @@ function doConfirm() {
   }
 
   currentSpec = null
-  if (genMode === 'code') { show($('codeInput')) } else { show($('prompt')) }
+  if (genMode === 'image') { show($('imageArea')) }
+  else if (genMode === 'code') { show($('codeInput')) }
+  else { show($('prompt')) }
   hide($('genPreview')); updateBottomBar()
 }
 
 function doCancel() {
   currentSpec = null; hide($('genPreview'))
-  if (genMode === 'code') { show($('codeInput')) } else { show($('prompt')) }
+  if (genMode === 'image') { show($('imageArea')) }
+  else if (genMode === 'code') { show($('codeInput')) }
+  else { show($('prompt')) }
   updateBottomBar()
 }
 
@@ -1275,13 +1412,18 @@ document.addEventListener('keydown', function(e) {
 // ══════════════════════════════════════════════════════════════
 // リサイズ
 // ══════════════════════════════════════════════════════════════
-var isExpanded = false
+var expandState = 0 // 0=default, 1=medium, 2=max
+var SIZES = [
+  { w: 480, h: 680 },
+  { w: 720, h: 860 },
+  { w: 1200, h: 1000 },
+]
 function postResize(w, h) {
   parent.postMessage({ pluginMessage: { type: 'resize', width: Math.round(w), height: Math.round(h) } }, '*')
 }
 $('btnExpand').addEventListener('click', function() {
-  isExpanded = !isExpanded
-  var sz = isExpanded ? { w: 640, h: 800 } : { w: 480, h: 680 }
+  expandState = (expandState + 1) % SIZES.length
+  var sz = SIZES[expandState]
   postResize(sz.w, sz.h)
 })
 ;(function() {
