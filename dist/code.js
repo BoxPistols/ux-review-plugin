@@ -515,19 +515,19 @@ function createVariableSwatch(spec) {
 
 // ── パス指定ノード検索（"Parent/Child" 形式もサポート）──
 function findByPath(root, path) {
-  if (!path) return null;
-  // スラッシュ区切りならパスとして解決
+  if (!path || !root) return null;
+  if (typeof root.findOne !== "function") return null;
   var parts = path.split("/");
   if (parts.length > 1) {
     var node = root;
     for (var p = 0; p < parts.length; p++) {
+      if (!node || typeof node.findOne !== "function") return null;
       var seg = parts[p];
       node = node.findOne(function(n) { return n.name === seg; });
       if (!node) return null;
     }
     return node;
   }
-  // 単純な名前検索
   return root.findOne(function(n) { return n.name === path; });
 }
 
@@ -684,6 +684,44 @@ figma.ui.onmessage = function(msg) {
       undoStack.push({ collections: [], variables: [], nodes: [result.cloneId], renames: result.renames });
       figma.ui.postMessage({ type: "review-applied", applied: result.applied, undoCount: undoStack.length });
       figma.notify("\u2713 To-Be\u3092\u751F\u6210 (" + result.applied + "\u4EF6\u9069\u7528)");
+    }).catch(function(e) {
+      figma.ui.postMessage({ type: "review-error", error: e.message || String(e) });
+    });
+  }
+
+  // ── Review: To-Be フレーム新規生成 ──
+  if (msg.type === "generate-tobe") {
+    var sel = figma.currentPage.selection;
+    var original = sel.length ? sel[0] : null;
+    var renames = [];
+
+    // 元フレームに As-Is ラベル
+    if (original && original.name.indexOf("As-Is") === -1 && original.name.indexOf("To-Be") === -1) {
+      var oldName = original.name;
+      original.name = oldName + " \u2014 As-Is";
+      renames.push({ id: original.id, oldName: oldName });
+    }
+
+    // To-Be フレームを生成
+    var toBeSpec = msg.toBeFrame;
+    if (!toBeSpec.name || toBeSpec.name.indexOf("To-Be") === -1) {
+      toBeSpec.name = (toBeSpec.name || "UI") + " \u2014 To-Be";
+    }
+
+    createFrames([toBeSpec]).then(function(r) {
+      // 元フレームの右に配置
+      if (original && r.nodes.length) {
+        var toBeNode = figma.getNodeById(r.nodes[0]);
+        if (toBeNode) {
+          toBeNode.x = original.x + original.width + 60;
+          toBeNode.y = original.y;
+          figma.currentPage.selection = [original, toBeNode];
+          figma.viewport.scrollAndZoomIntoView([original, toBeNode]);
+        }
+      }
+      undoStack.push({ collections: [], variables: [], nodes: r.nodes, renames: renames });
+      figma.ui.postMessage({ type: "tobe-done", undoCount: undoStack.length });
+      figma.notify("\u2713 To-Be UI\u3092\u751F\u6210\u3057\u307E\u3057\u305F");
     }).catch(function(e) {
       figma.ui.postMessage({ type: "review-error", error: e.message || String(e) });
     });

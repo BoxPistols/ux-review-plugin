@@ -508,6 +508,12 @@ window.onmessage = function(event) {
     currentReview = null; updateBottomBar()
     if (msg.undoCount > 0) show($('actUndo'))
   }
+  if (msg.type === 'tobe-done') {
+    hide($('status'))
+    addLog('reviewLog', 'ok', '✓ To-Be UIをキャンバスに生成しました')
+    currentReview = null; updateBottomBar()
+    if (msg.undoCount > 0) show($('actUndo'))
+  }
   if (msg.type === 'review-error') {
     hide($('status'))
     addLog('reviewLog', 'error', msg.error)
@@ -596,7 +602,56 @@ function nodeToText(n, depth) {
   return s
 }
 
-var REVIEW_PROMPT = 'あなたはMaterial Design 3に精通したUI/UXシニアレビュアーです。\n以下のFigmaフレーム構造を分析し、As-Is(現状分析)とTo-Be(改善提案)を出力してください。\n\nさらに、改善を反映するための具体的な修正指示をmodificationsとして出力してください。\n修正はフレームをクローンした上で適用されるため、元のデザインは保持されます。\n\n出力形式(JSONのみ。前置き・コードブロック不要):\n{\n  "asIs": "現状分析(3-5文。構造的な問題点を明確に)",\n  "toBe": "改善方針(3-5文。具体的な変更の方向性)",\n  "score": 1-100,\n  "modifications": [\n    { "target": "ノード名(完全一致)", "action": "アクション名", "value": "新しい値", "reason": "変更理由(1文)" }\n  ]\n}\n\n修正アクション:\n- set_fill: 背景色変更 value:"#hex"\n- set_text: テキスト変更 value:"新テキスト"\n- set_font_size: フォントサイズ変更 value:数値\n- set_font_weight: ウェイト変更 value:"Regular|Medium|SemiBold|Bold"\n- set_corner_radius: 角丸変更 value:数値\n- set_padding: パディング変更 value:数値\n- set_item_spacing: 間隔変更 value:数値\n- set_opacity: 不透明度変更 value:0-1\n- set_stroke: ストローク変更 value:"#hex"\n- remove: ノード削除\n\nルール:\n- modifications最大8件。インパクト大の変更のみ\n- targetはフレーム内のノード名と完全一致\n- Material Design 3準拠(カラー、スペーシング4dpグリッド、WCAG AA)\n- 本文#0F172A サブ#475569 キャプション#94A3B8\n- Button radius 20, Card radius 12, padding 16\n- 構造・コンポーネント選定の改善を優先'
+var REVIEW_PROMPT = [
+'あなたはMaterial Design 3に精通したUI/UXシニアレビュアーです。',
+'以下のFigmaフレーム構造を分析し、日本語で As-Is/To-Be を出力してください。',
+'',
+'さらに、改善版UIを toBeFrame として完全なフレーム構造で出力してください。',
+'元のデザインの目的と内容を維持しつつ、構造・タイポグラフィ・スペーシング・カラーを改善します。',
+'',
+'出力形式(JSONのみ。前置き・コードブロック不要):',
+'{',
+'  "asIs": "現状分析(日本語3-5文。構造的な問題点を明確に)",',
+'  "toBe": "改善方針(日本語3-5文。具体的にどう変えるか)",',
+'  "score": 1-100,',
+'  "toBeFrame": {',
+'    "name": "画面名",',
+'    "type": "FRAME",',
+'    "width": 元フレームと同じ幅,',
+'    "height": 内容に合わせた高さ,',
+'    "fill": "#FFFFFF",',
+'    "layoutMode": "VERTICAL",',
+'    "padding": 24,',
+'    "itemSpacing": 16,',
+'    "counterAxisSizingMode": "FIXED",',
+'    "children": [...]',
+'  }',
+'}',
+'',
+'toBeFrame の children 型:',
+'TEXT: {"type":"TEXT","text":"...","fontSize":14,"fontWeight":"Bold","color":"#hex","fillWidth":true}',
+'RECT: {"type":"RECT","width":数値,"height":数値,"fill":"#hex","cornerRadius":数値,"fillWidth":true}',
+'ELLIPSE: {"type":"ELLIPSE","width":40,"height":40,"fill":"#hex"}',
+'FRAME: {"type":"FRAME","name":"名前","layoutMode":"VERTICAL|HORIZONTAL","padding":16,"paddingX":16,"paddingY":12,"itemSpacing":8,"fill":"#hex","cornerRadius":12,"fillWidth":true,"counterAxisAlignItems":"CENTER","children":[...]}',
+'',
+'Material Design 3 トークン:',
+'Primary #2563EB, OnPrimary #FFF, PrimaryContainer #DBEAFE',
+'Surface #FFF, SurfaceVariant #F1F5F9, OnSurface #0F172A, OnSurfaceVariant #475569',
+'Outline #CBD5E1, Error #DC2626, Success #16A34A',
+'',
+'設計ルール:',
+'- 必ず日本語で分析・テキストを出力',
+'- toBeFrame は元デザインの目的を維持しつつ改善した完全なUI',
+'- 全コンテナにlayoutMode必須。絶対座標禁止',
+'- fillWidth:true で親幅いっぱい',
+'- FRAMEには意味ある名前(Header, CardList, SearchBar等)',
+'- 深さ3-5のネスト構造',
+'- 本文#0F172A サブ#475569 WCAG AA準拠',
+'- 4dpグリッド厳守。Button radius20, Card radius12, padding16',
+'- タイポグラフィ: Headline 24-32 Bold, Title 16-20 SemiBold, Body 14 Regular, Label 12 Medium',
+'- ボタン: height 44+, paddingX 24, paddingY 12',
+'- テキストラベルやコンテンツは元デザインの日本語を維持・改善',
+].join('\n')
 
 function doReviewImprove() {
   if (!selectedNodes.length) return
@@ -624,7 +679,7 @@ function doReviewImprove() {
   } else {
     p = fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-      body:JSON.stringify({ model:model, messages:[{role:'system',content:REVIEW_PROMPT},{role:'user',content:text}], response_format:{type:'json_object'}, max_completion_tokens:4000 })
+      body:JSON.stringify({ model:model, messages:[{role:'system',content:REVIEW_PROMPT},{role:'user',content:text}], response_format:{type:'json_object'}, max_completion_tokens:8000 })
     }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'OpenAI error')}); return r.json() })
      .then(function(d) { return d.choices[0].message.content })
   }
@@ -665,19 +720,13 @@ function renderReviewPreview(r) {
   h += '<div class="review-block"><div class="review-label asis">AS-IS — 現状分析</div><div class="review-text">' + textToParagraphs(r.asIs) + '</div></div>'
   h += '<div class="review-block"><div class="review-label tobe">TO-BE — 改善方針</div><div class="review-text">' + textToParagraphs(r.toBe) + '</div></div>'
 
-  if (r.modifications && r.modifications.length) {
-    h += '<div class="section-title" style="margin-top:4px">修正内容（' + r.modifications.length + '件）</div>'
-    h += '<div class="mod-list">'
-    for (var i = 0; i < r.modifications.length; i++) {
-      var m = r.modifications[i]
-      h += '<div class="mod-item" data-target="' + m.target + '">'
-      h += '<div class="mod-head"><span class="mod-target">' + m.target + '</span><span class="mod-action">' + m.action + '</span>'
-      if (m.value != null) h += '<span class="mod-value">' + m.value + '</span>'
-      h += '</div>'
-      if (m.reason) h += '<div class="mod-reason">' + m.reason + '</div>'
-      h += '</div>'
-    }
-    h += '</div>'
+  // To-Be フレームのプレビュー
+  if (r.toBeFrame) {
+    var fr = r.toBeFrame
+    var cc = (fr.children && fr.children.length) || 0
+    h += '<div class="review-block"><div class="section-title">生成される改善版UI</div>'
+    h += '<div class="review-text"><p>' + (fr.name || 'To-Be') + ' (' + (fr.width || '?') + 'x' + (fr.height || '?') + ')</p>'
+    h += '<p>' + cc + ' elements / ' + (fr.layoutMode || 'Auto Layout') + '</p></div></div>'
   }
 
   $('reviewPreview').innerHTML = h
@@ -685,9 +734,18 @@ function renderReviewPreview(r) {
 }
 
 function doReviewConfirm() {
-  if (!currentReview || !currentReview.modifications) return
-  show($('status')); $('statusText').textContent = 'To-Beフレームを生成中...'
-  parent.postMessage({ pluginMessage: { type: 'apply-review', modifications: currentReview.modifications } }, '*')
+  if (!currentReview) return
+
+  show($('status')); $('statusText').textContent = 'To-Be UIを生成中...'
+
+  // toBeFrame がある場合は新規フレーム生成
+  if (currentReview.toBeFrame) {
+    parent.postMessage({ pluginMessage: { type: 'generate-tobe', toBeFrame: currentReview.toBeFrame } }, '*')
+  } else if (currentReview.modifications) {
+    // フォールバック: クローン + 修正適用
+    parent.postMessage({ pluginMessage: { type: 'apply-review', modifications: currentReview.modifications } }, '*')
+  }
+
   currentReview = null
   hide($('reviewPreview'))
   show($('reviewEmpty'))
