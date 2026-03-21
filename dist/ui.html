@@ -238,6 +238,15 @@ html, body {
 .mod-value { color: var(--text); font-weight: 600; }
 .mod-reason { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
 
+/* ── Review mode chips ── */
+.review-modes { display: flex; gap: 4px; padding: 6px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
+.r-chip {
+  padding: 4px 12px; font-size: 12px; border: 1px solid var(--border); border-radius: 16px;
+  color: var(--text-dim); cursor: pointer; user-select: none; transition: all 0.15s;
+}
+.r-chip:hover { border-color: var(--border-hi); color: var(--text-sub); }
+.r-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
 /* ── Chat ── */
 .chat-msg { font-size: 13px; line-height: 1.65; padding: 8px 12px; border-radius: 8px; max-width: 90%; }
 .chat-msg.user { background: var(--accent-soft); color: var(--text); align-self: flex-end; }
@@ -437,6 +446,12 @@ html, body {
       <span class="sel-name" id="selName">フレームを選択してください</span>
       <span class="sel-meta" id="selMeta"></span>
     </div>
+    <div class="review-modes">
+      <span class="r-chip active" data-mode="ia">情報設計</span>
+      <span class="r-chip" data-mode="visual">ビジュアル</span>
+      <span class="r-chip" data-mode="system">デザインシステム</span>
+      <span class="r-chip" data-mode="handoff">実装引継ぎ</span>
+    </div>
     <div class="panel-body">
       <div class="empty-state" id="reviewEmpty">
         <div class="empty-icon">✦</div>
@@ -588,6 +603,15 @@ var selectedNodes = []
 var selectedComponentSet = null
 var reviewLoading = false
 var genLoading = false
+var reviewMode = 'ia'
+
+// レビュー観点チップ
+document.querySelectorAll('.r-chip').forEach(function(c) {
+  c.addEventListener('click', function() {
+    reviewMode = c.getAttribute('data-mode')
+    document.querySelectorAll('.r-chip').forEach(function(x) { x.classList.toggle('active', x.getAttribute('data-mode') === reviewMode) })
+  })
+})
 
 function updateBottomBar() {
   // 全非表示
@@ -957,6 +981,13 @@ var REVIEW_PROMPT = [
 '- message は断定形。200文字以上',
 ].join('\n')
 
+var REVIEW_MODE_PROMPTS = {
+  ia: '', // デフォルト（REVIEW_PROMPT がそのまま情報設計向け）
+  visual: '\n\n【モード: ビジュアルデザイン】\n上記の観点に加え、以下を重点的にレビューしてください:\n- タイポグラフィの階層（Display/Headline/Title/Body/Label）が視覚的に明確か\n- カラーの意味的一貫性（Primary/Secondary/Error/Success の使い分け）\n- スペーシングの一貫性（4dpグリッド、余白のリズム）\n- 視覚的な重み付けと情報の優先度が一致しているか\n- ダークモード/ライトモードでの視認性',
+  system: '\n\n【モード: デザインシステム】\n上記の観点を以下に置き換えてレビューしてください:\n- コンポーネントの命名規則は一貫しているか（PascalCase、意味的な名前）\n- バリアントの軸（Size/Style/State）が網羅的か、不足している組み合わせはないか\n- ガイドライン文書として、「いつ使うか」「いつ使わないか」が明記されているか\n- コンポーネントの粒度は適切か（過度に分割/統合されていないか）\n- トークン（色/スペーシング/角丸）がハードコードではなくセマンティックに参照されているか\n- エンジニアがこのドキュメントだけで実装できるか（プロパティ/ステート/挙動の記載漏れ）',
+  handoff: '\n\n【モード: 実装引継ぎ】\n上記の観点を以下に置き換えてレビューしてください:\n- エンジニアがこの画面を見て、何を実装すればよいか迷わないか\n- インタラクション（クリック後の遷移先、ホバー、フォーカス、無効化）が明示されているか\n- APIとの接続点（データの取得元、更新時の挙動、エラーハンドリング）が読み取れるか\n- レスポンシブ対応（ブレークポイントでの変化）が明示されているか\n- 状態遷移図が必要な箇所に定義されているか\n- コンポーネントの再利用指示（既存コンポーネント名、新規作成の要否）が明確か',
+}
+
 function doReviewImprove() {
   if (!selectedNodes.length) return
   hide($('reviewEmpty'))
@@ -973,17 +1004,19 @@ function doReviewImprove() {
   var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
   if (!apiKey) { reviewLoading = false; updateBottomBar(); $('btnReview').disabled = false; addLog('reviewLog','error','APIキーを設定してください'); return }
 
+  var fullPrompt = REVIEW_PROMPT + (REVIEW_MODE_PROMPTS[reviewMode] || '')
+
   var p
   if (isGemini(model)) {
     p = fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ system_instruction:{parts:[{text:REVIEW_PROMPT}]}, contents:[{parts:[{text:text}]}], generationConfig:{response_mime_type:'application/json',temperature:0.3} })
-    }).then(function(r) { if(!r.ok) { if(r.status===429) throw new Error('レート制限に達しました。設定からOpenAIモデルに切り替えるか、しばらく待ってください'); return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'Gemini error '+r.status)}) } return r.json() })
+      body:JSON.stringify({ system_instruction:{parts:[{text:fullPrompt}]}, contents:[{parts:[{text:text}]}], generationConfig:{response_mime_type:'application/json',temperature:0.3} })
+    }).then(function(r) { if(!r.ok) { if(r.status===429) throw new Error('レート制限。OpenAIに切り替えてください'); return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'Gemini error '+r.status)}) } return r.json() })
      .then(function(d) { return d.candidates[0].content.parts[0].text })
   } else {
     p = fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-      body:JSON.stringify({ model:model, messages:[{role:'system',content:REVIEW_PROMPT},{role:'user',content:text}], response_format:{type:'json_object'}, max_completion_tokens:8000 })
+      body:JSON.stringify({ model:model, messages:[{role:'system',content:fullPrompt},{role:'user',content:text}], response_format:{type:'json_object'}, max_completion_tokens:8000 })
     }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'OpenAI error')}); return r.json() })
      .then(function(d) { return d.choices[0].message.content })
   }
@@ -1540,20 +1573,17 @@ document.addEventListener('keydown', function(e) {
 // ══════════════════════════════════════════════════════════════
 // リサイズ
 // ══════════════════════════════════════════════════════════════
-var expandState = 0
-var SIZES = [
-  { w: 480, h: 680 },
-  { w: 720, h: 860 },
-  { w: 1200, h: 1000 },
-  { w: Math.min(screen.width - 200, 1400), h: Math.min(screen.height - 150, 1000) },
-]
+var isMaximized = false
 function postResize(w, h) {
   parent.postMessage({ pluginMessage: { type: 'resize', width: Math.round(w), height: Math.round(h) } }, '*')
 }
 $('btnExpand').addEventListener('click', function() {
-  expandState = (expandState + 1) % SIZES.length
-  var sz = SIZES[expandState]
-  postResize(sz.w, sz.h)
+  isMaximized = !isMaximized
+  if (isMaximized) {
+    postResize(Math.min(screen.width - 200, 1600), Math.min(screen.height - 150, 1200))
+  } else {
+    postResize(480, 680)
+  }
 })
 ;(function() {
   var g = $('resizeGrip'), drag = false, sx, sy, sw, sh
