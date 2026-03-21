@@ -20,7 +20,12 @@ function ensureFonts() {
 function hex2rgb(hex) {
   var h = (hex || "#888888").replace("#", "");
   if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
-  return { r: parseInt(h.substring(0, 2), 16) / 255, g: parseInt(h.substring(2, 4), 16) / 255, b: parseInt(h.substring(4, 6), 16) / 255 };
+  var r = parseInt(h.substring(0, 2), 16) / 255;
+  var g = parseInt(h.substring(2, 4), 16) / 255;
+  var b = parseInt(h.substring(4, 6), 16) / 255;
+  // NaN フォールバック（不正な hex 値）
+  if (isNaN(r)) r = 0.5; if (isNaN(g)) g = 0.5; if (isNaN(b)) b = 0.5;
+  return { r: r, g: g, b: b };
 }
 function solid(hex) { return hex ? [{ type: "SOLID", color: hex2rgb(hex) }] : []; }
 function d(val, def) { return (val != null) ? val : def; }
@@ -30,8 +35,16 @@ var WMAP = { Regular: "Regular", Medium: "Medium", SemiBold: "Semi Bold", Bold: 
 // Undo スタック
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 var undoStack = [];
-// プラグインが作成したCollectionのIDを追跡
 var pluginCreatedCollections = [];
+
+// 起動時に永続化された pluginCreatedCollections を復元
+figma.clientStorage.getAsync("plugin_collections").then(function(saved) {
+  if (saved && Array.isArray(saved)) pluginCreatedCollections = saved;
+});
+
+function savePluginCollections() {
+  figma.clientStorage.setAsync("plugin_collections", pluginCreatedCollections);
+}
 
 function undoEntry(entry) {
   var i;
@@ -43,6 +56,7 @@ function undoEntry(entry) {
     var idx = pluginCreatedCollections.indexOf(entry.collections[i]);
     if (idx !== -1) pluginCreatedCollections.splice(idx, 1);
   }
+  if (entry.collections.length) savePluginCollections();
   // リネームの復元
   if (entry.renames) {
     for (i = 0; i < entry.renames.length; i++) {
@@ -155,7 +169,7 @@ function createVars(collections) {
     var col = collections[i];
     var c = figma.variables.createVariableCollection(col.collection);
     ids.collections.push(c.id);
-    pluginCreatedCollections.push(c.id);
+    pluginCreatedCollections.push(c.id); savePluginCollections();
     var mode = c.modes[0].modeId || c.modes[0].id;
     for (var j = 0; j < col.variables.length; j++) {
       var vd = col.variables[j];
@@ -347,7 +361,7 @@ function importTokens(jsonStr) {
     var items = groups[gname];
     var coll = figma.variables.createVariableCollection(gname);
     ids.collections.push(coll.id);
-    pluginCreatedCollections.push(coll.id);
+    pluginCreatedCollections.push(coll.id); savePluginCollections();
     var modeId = coll.modes[0].modeId || coll.modes[0].id;
 
     for (var j = 0; j < items.length; j++) {
@@ -411,6 +425,7 @@ function clearAllCollections(onlyPluginCreated) {
     var idx = pluginCreatedCollections.indexOf(cid);
     if (idx !== -1) pluginCreatedCollections.splice(idx, 1);
   }
+  savePluginCollections();
   return count;
 }
 
@@ -593,101 +608,6 @@ function findByPath(root, path) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// [Review] As-Is → To-Be クローン + 修正適用
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function applyReview(modifications) {
-  var sel = figma.currentPage.selection;
-  if (!sel.length) return Promise.reject(new Error("フレームが選択されていません"));
-
-  var original = sel[0];
-  var originalOldName = original.name;
-  var clone = original.clone();
-  var renames = [];
-
-  // To-Be としてラベル付け・配置
-  clone.name = originalOldName + " \u2014 To-Be";
-  clone.x = original.x + original.width + 60;
-  clone.y = original.y;
-
-  // As-Is ラベルも追記（Undo時に元名に戻す）
-  if (originalOldName.indexOf("As-Is") === -1 && originalOldName.indexOf("To-Be") === -1) {
-    original.name = originalOldName + " \u2014 As-Is";
-    renames.push({ id: original.id, oldName: originalOldName });
-  }
-
-  // テキスト変更に必要なフォントを事前ロード
-  var textActions = ["set_text", "set_font_size", "set_font_weight"];
-  var fontPromises = [ensureFonts()];
-
-  for (var i = 0; i < modifications.length; i++) {
-    var mod = modifications[i];
-    if (textActions.indexOf(mod.action) !== -1) {
-      var target = findByPath(clone, mod.target);
-      if (target && target.type === "TEXT") {
-        var fn = target.fontName;
-        if (fn && fn !== figma.mixed) {
-          fontPromises.push(figma.loadFontAsync(fn));
-        }
-        if (mod.action === "set_font_weight") {
-          fontPromises.push(figma.loadFontAsync({ family: "Inter", style: WMAP[mod.value] || "Regular" }));
-        }
-      }
-    }
-  }
-
-  return Promise.all(fontPromises).then(function() {
-    var applied = 0;
-    for (var i = 0; i < modifications.length; i++) {
-      var mod = modifications[i];
-      var target = findByPath(clone, mod.target);
-      if (!target) continue;
-
-      try {
-        switch (mod.action) {
-          case "set_fill":
-            target.fills = solid(mod.value);
-            applied++; break;
-          case "set_text":
-            if (target.type === "TEXT") { target.characters = String(mod.value); applied++; }
-            break;
-          case "set_font_size":
-            if (target.type === "TEXT") { target.fontSize = Number(mod.value); applied++; }
-            break;
-          case "set_font_weight":
-            if (target.type === "TEXT") { target.fontName = { family: "Inter", style: WMAP[mod.value] || "Regular" }; applied++; }
-            break;
-          case "set_corner_radius":
-            if ("cornerRadius" in target) { target.cornerRadius = Number(mod.value); applied++; }
-            break;
-          case "set_padding":
-            var pv = Number(mod.value);
-            target.paddingTop = target.paddingBottom = target.paddingLeft = target.paddingRight = pv;
-            applied++; break;
-          case "set_item_spacing":
-            if ("itemSpacing" in target) { target.itemSpacing = Number(mod.value); applied++; }
-            break;
-          case "set_opacity":
-            target.opacity = Number(mod.value);
-            applied++; break;
-          case "set_stroke":
-            target.strokes = solid(mod.value); target.strokeWeight = d(target.strokeWeight, 1);
-            applied++; break;
-          case "remove":
-            target.remove();
-            applied++; break;
-        }
-      } catch(e) { /* skip failed modifications */ }
-    }
-
-    // 両方を選択してズーム
-    figma.currentPage.selection = [original, clone];
-    figma.viewport.scrollAndZoomIntoView([original, clone]);
-
-    return { cloneId: clone.id, applied: applied, originalName: original.name, renames: renames };
-  });
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // メッセージハンドラ
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 figma.ui.onmessage = function(msg) {
@@ -844,54 +764,6 @@ figma.ui.onmessage = function(msg) {
     });
   }
 
-  // ── Review: As-Is → To-Be 適用 ──
-  if (msg.type === "apply-review") {
-    applyReview(msg.modifications).then(function(result) {
-      undoStack.push({ collections: [], variables: [], nodes: [result.cloneId], renames: result.renames });
-      figma.ui.postMessage({ type: "review-applied", applied: result.applied, undoCount: undoStack.length });
-      figma.notify("\u2713 To-Be\u3092\u751F\u6210 (" + result.applied + "\u4EF6\u9069\u7528)");
-    }).catch(function(e) {
-      figma.ui.postMessage({ type: "review-error", error: e.message || String(e) });
-    });
-  }
-
-  // ── Review: To-Be フレーム新規生成 ──
-  if (msg.type === "generate-tobe") {
-    var sel = figma.currentPage.selection;
-    var original = sel.length ? sel[0] : null;
-    var renames = [];
-
-    // 元フレームに As-Is ラベル
-    if (original && original.name.indexOf("As-Is") === -1 && original.name.indexOf("To-Be") === -1) {
-      var oldName = original.name;
-      original.name = oldName + " \u2014 As-Is";
-      renames.push({ id: original.id, oldName: oldName });
-    }
-
-    // To-Be フレームを生成
-    var toBeSpec = msg.toBeFrame;
-    if (!toBeSpec.name || toBeSpec.name.indexOf("To-Be") === -1) {
-      toBeSpec.name = (toBeSpec.name || "UI") + " \u2014 To-Be";
-    }
-
-    createFrames([toBeSpec]).then(function(r) {
-      // 元フレームの右に配置
-      if (original && r.nodes.length) {
-        var toBeNode = figma.getNodeById(r.nodes[0]);
-        if (toBeNode) {
-          toBeNode.x = original.x + original.width + 60;
-          toBeNode.y = original.y;
-          figma.currentPage.selection = [original, toBeNode];
-          figma.viewport.scrollAndZoomIntoView([original, toBeNode]);
-        }
-      }
-      undoStack.push({ collections: [], variables: [], nodes: r.nodes, renames: renames });
-      figma.ui.postMessage({ type: "tobe-done", undoCount: undoStack.length });
-      figma.notify("\u2713 To-Be UI\u3092\u751F\u6210\u3057\u307E\u3057\u305F");
-    }).catch(function(e) {
-      figma.ui.postMessage({ type: "review-error", error: e.message || String(e) });
-    });
-  }
 
   // ── Review: ノードハイライト ──
   if (msg.type === "highlight-node") {

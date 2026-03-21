@@ -466,6 +466,7 @@ var $ = function(id) { return document.getElementById(id) }
 function show(el) { if (el) el.classList.remove('hidden') }
 function hide(el) { if (el) el.classList.add('hidden') }
 function isGemini(m) { return m.indexOf('gemini') === 0 }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
 var currentTab = 'review'
 var currentSpec = null
@@ -867,7 +868,7 @@ function textToParagraphs(text) {
     current += sentences[i]
     // 2文ごと、または最後の文で段落を切る
     if ((i + 1) % 2 === 0 || i === sentences.length - 1) {
-      if (current.trim()) paragraphs.push('<p>' + current.trim() + '</p>')
+      if (current.trim()) paragraphs.push('<p>' + esc(current.trim()) + '</p>')
       current = ''
     }
   }
@@ -881,7 +882,7 @@ function renderDetailItem(d) {
   if (d.target) h += '<span class="mod-target">' + d.target + '</span>'
   h += '<span class="mod-action">' + (d.category || '') + '</span>'
   h += '</div>'
-  h += '<div style="margin-top:4px">' + (d.message || '') + '</div>'
+  h += '<div style="margin-top:4px">' + esc(d.message || '') + '</div>'
   h += '</div>'
   return h
 }
@@ -1174,7 +1175,7 @@ function doConfirm() {
     mode: genMode,
     input: fullInput,
     name: currentSpec.name || 'Generated',
-    spec: currentSpec,
+    spec: JSON.stringify(currentSpec).length < 50000 ? currentSpec : null,
   }}}, '*')
 
   // ComponentSet 選択中 + components がある場合は既存セットに追加
@@ -1249,8 +1250,16 @@ $('btnRun').addEventListener('click', doGenerate)
 $('btnConfirm').addEventListener('click', doConfirm)
 $('btnCancel').addEventListener('click', doCancel)
 $('btnImport').addEventListener('click', doImportTokens)
-$('btnUndo').addEventListener('click', function() { parent.postMessage({ pluginMessage: { type: 'undo' } }, '*') })
-$('btnUndoAll').addEventListener('click', function() { parent.postMessage({ pluginMessage: { type: 'undo-all' } }, '*') })
+$('btnUndo').addEventListener('click', function() {
+  if (confirm('直前の操作を元に戻しますか？（ComponentSetへのバリアント追加の場合、セット全体が削除されます）')) {
+    parent.postMessage({ pluginMessage: { type: 'undo' } }, '*')
+  }
+})
+$('btnUndoAll').addEventListener('click', function() {
+  if (confirm('全ての操作を元に戻しますか？')) {
+    parent.postMessage({ pluginMessage: { type: 'undo-all' } }, '*')
+  }
+})
 $('btnRefresh').addEventListener('click', function() { parent.postMessage({ pluginMessage: { type: 'list-collections' } }, '*') })
 $('btnClearPlugin').addEventListener('click', function() { if (confirm('プラグインが作成したCollectionsを削除しますか？')) parent.postMessage({ pluginMessage: { type: 'clear-all-collections', onlyPlugin: true } }, '*') })
 $('btnClearAll').addEventListener('click', function() { if (confirm('⚠ ファイル内の全Variable Collectionsを削除します。手動作成分も含まれます。本当に実行しますか？')) parent.postMessage({ pluginMessage: { type: 'clear-all-collections', onlyPlugin: false } }, '*') })
