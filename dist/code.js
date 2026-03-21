@@ -115,10 +115,33 @@ function extractComponentSetInfo(cs) {
         var c = child.fills[0].color;
         fill = "#" + Math.round(c.r*255).toString(16).padStart(2,"0") + Math.round(c.g*255).toString(16).padStart(2,"0") + Math.round(c.b*255).toString(16).padStart(2,"0");
       }
-      variants.push({ name: child.name, props: props, fill: fill, width: Math.round(child.width), height: Math.round(child.height) });
+      // stroke情報
+      var stroke = null;
+      if (child.strokes && child.strokes.length && child.strokes[0].type === "SOLID") {
+        var sc = child.strokes[0].color;
+        stroke = "#" + Math.round(sc.r*255).toString(16).padStart(2,"0") + Math.round(sc.g*255).toString(16).padStart(2,"0") + Math.round(sc.b*255).toString(16).padStart(2,"0");
+      }
+      // 子要素の数とタイプ
+      var childTypes = [];
+      if ("children" in child) {
+        for (var k = 0; k < child.children.length; k++) childTypes.push(child.children[k].type);
+      }
+      variants.push({ name: child.name, props: props, fill: fill, stroke: stroke, width: Math.round(child.width), height: Math.round(child.height), childTypes: childTypes });
     }
   }
-  return { id: cs.id, name: cs.name, variantCount: variants.length, variants: variants };
+
+  // プロパティ軸を抽出（例: ["Style", "Size"]）
+  var axes = {};
+  for (var vi = 0; vi < variants.length; vi++) {
+    var pkeys = Object.keys(variants[vi].props);
+    for (var pi = 0; pi < pkeys.length; pi++) {
+      if (!axes[pkeys[pi]]) axes[pkeys[pi]] = [];
+      var val = variants[vi].props[pkeys[pi]];
+      if (axes[pkeys[pi]].indexOf(val) === -1) axes[pkeys[pi]].push(val);
+    }
+  }
+
+  return { id: cs.id, name: cs.name, variantCount: variants.length, variants: variants, axes: axes, componentType: variants[0] ? variants[0].childTypes.join("+") : "unknown" };
 }
 
 figma.on("selectionchange", notifySelection);
@@ -669,7 +692,7 @@ function applyReview(modifications) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 figma.ui.onmessage = function(msg) {
 
-  // ── Generate: 既存 ComponentSet にバリアント追加 ──
+  // ── Generate: 既存 ComponentSet にバリアント追加（クローン方式）──
   if (msg.type === "add-variants") {
     var csId = msg.componentSetId;
     var cs = figma.getNodeById(csId);
@@ -678,39 +701,67 @@ figma.ui.onmessage = function(msg) {
       return;
     }
 
-    ensureFonts().then(function() {
+    // テンプレートとなる既存バリアントを取得（最初のCOMPONENT）
+    var template = null;
+    for (var ti = 0; ti < cs.children.length; ti++) {
+      if (cs.children[ti].type === "COMPONENT") { template = cs.children[ti]; break; }
+    }
+    if (!template) {
+      figma.ui.postMessage({ type: "error", error: "テンプレートとなるバリアントが見つかりません" });
+      return;
+    }
+
+    // テキストノードのフォントを事前ロード
+    var fontPromises = [ensureFonts()];
+    var textNodes = template.findAll(function(n) { return n.type === "TEXT"; });
+    for (var fi = 0; fi < textNodes.length; fi++) {
+      var fn = textNodes[fi].fontName;
+      if (fn && fn !== figma.mixed) fontPromises.push(figma.loadFontAsync(fn));
+    }
+
+    Promise.all(fontPromises).then(function() {
       var newNodes = [];
       var variants = msg.variants;
+
       for (var i = 0; i < variants.length; i++) {
         var vr = variants[i];
-        var c = figma.createComponent();
-        c.layoutMode = "HORIZONTAL";
-        c.primaryAxisAlignItems = "CENTER";
-        c.counterAxisAlignItems = "CENTER";
-        c.primaryAxisSizingMode = "AUTO";
-        c.counterAxisSizingMode = "AUTO";
-        c.paddingLeft = c.paddingRight = d(vr.paddingX, 16);
-        c.paddingTop = c.paddingBottom = d(vr.paddingY, 10);
-        c.cornerRadius = d(vr.cornerRadius, 8);
-        c.itemSpacing = d(vr.gap, 8);
 
-        var fill = vr.fill;
-        c.fills = (fill && fill !== "none" && fill !== "transparent") ? solid(fill) : [];
-        if (vr.stroke) { c.strokes = solid(vr.stroke); c.strokeWeight = d(vr.strokeWidth, 1); }
-        if (vr.opacity != null) c.opacity = vr.opacity;
+        // 既存バリアントをクローン（内部構造を完全維持）
+        var clone = template.clone();
 
-        var t = figma.createText();
-        t.fontName = { family: "Inter", style: WMAP[vr.fontWeight] || "Medium" };
-        t.characters = vr.label || "\u30DC\u30BF\u30F3";
-        t.fontSize = d(vr.fontSize, 14);
-        if (vr.textColor) t.fills = solid(vr.textColor);
-        c.appendChild(t);
+        // バリアント名を設定
+        clone.name = Object.keys(vr.props).map(function(k) { return k + "=" + vr.props[k]; }).join(", ");
 
-        c.name = Object.keys(vr.props).map(function(k) { return k + "=" + vr.props[k]; }).join(", ");
-        newNodes.push(c);
+        // fill 変更
+        if (vr.fill) {
+          if (vr.fill === "transparent" || vr.fill === "none") { clone.fills = []; }
+          else { clone.fills = solid(vr.fill); }
+        }
+
+        // stroke 変更
+        if (vr.stroke) { clone.strokes = solid(vr.stroke); clone.strokeWeight = d(vr.strokeWidth, 1); }
+
+        // opacity 変更
+        if (vr.opacity != null) clone.opacity = vr.opacity;
+
+        // テキスト変更（最初のTEXTノードのラベルと色）
+        if (vr.label || vr.textColor) {
+          var firstText = clone.findOne(function(n) { return n.type === "TEXT"; });
+          if (firstText) {
+            try {
+              if (vr.label) firstText.characters = vr.label;
+              if (vr.textColor) firstText.fills = solid(vr.textColor);
+            } catch(e) {}
+          }
+        }
+
+        // cornerRadius 変更
+        if (vr.cornerRadius != null) clone.cornerRadius = vr.cornerRadius;
+
+        newNodes.push(clone);
       }
 
-      // 既存のバリアントを取得
+      // 既存バリアントを取得
       var existingComponents = [];
       for (var j = 0; j < cs.children.length; j++) {
         if (cs.children[j].type === "COMPONENT") existingComponents.push(cs.children[j]);
@@ -718,10 +769,12 @@ figma.ui.onmessage = function(msg) {
 
       // 既存 + 新規で再結合
       var allComponents = existingComponents.concat(newNodes);
-      var newCs = figma.combineAsVariants(allComponents, cs.parent);
-      newCs.name = cs.name;
-      newCs.x = cs.x;
-      newCs.y = cs.y;
+      var csParent = cs.parent;
+      var csX = cs.x, csY = cs.y, csName = cs.name;
+      var newCs = figma.combineAsVariants(allComponents, csParent);
+      newCs.name = csName;
+      newCs.x = csX;
+      newCs.y = csY;
 
       // Auto Layout
       newCs.layoutMode = "VERTICAL";
