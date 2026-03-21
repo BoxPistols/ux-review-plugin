@@ -752,6 +752,40 @@ figma.ui.onmessage = function(msg) {
     }
   }
 
+  // ── Review: 履歴 CRUD ──
+  if (msg.type === "save-review") {
+    figma.clientStorage.getAsync("review_history").then(function(existing) {
+      var history = existing || [];
+      // 同じフレームの古い履歴を保持しつつ新規追加（最大20件）
+      history.unshift(msg.entry);
+      if (history.length > 20) history = history.slice(0, 20);
+      return figma.clientStorage.setAsync("review_history", history).then(function() {
+        figma.ui.postMessage({ type: "review-history", history: history });
+      });
+    });
+  }
+
+  if (msg.type === "load-review-history") {
+    figma.clientStorage.getAsync("review_history").then(function(history) {
+      figma.ui.postMessage({ type: "review-history", history: history || [] });
+    });
+  }
+
+  if (msg.type === "delete-review") {
+    figma.clientStorage.getAsync("review_history").then(function(existing) {
+      var history = (existing || []).filter(function(e) { return e.id !== msg.id; });
+      return figma.clientStorage.setAsync("review_history", history).then(function() {
+        figma.ui.postMessage({ type: "review-history", history: history });
+      });
+    });
+  }
+
+  if (msg.type === "clear-review-history") {
+    figma.clientStorage.setAsync("review_history", []).then(function() {
+      figma.ui.postMessage({ type: "review-history", history: [] });
+    });
+  }
+
   // ── Tokens: デザイントークンImport ──
   if (msg.type === "import-tokens") {
     try {
