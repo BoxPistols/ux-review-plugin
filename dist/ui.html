@@ -137,15 +137,6 @@ html, body {
   height: 2px; background: var(--accent); filter: blur(4px); opacity: 0.6;
 }
 
-/* ── Sub tabs ── */
-.sub-tabs { display: flex; gap: 0; flex-shrink: 0; padding: 0 16px; border-bottom: 1px solid var(--border); }
-.sub-tab {
-  padding: 8px 12px; font-size: 12px; font-weight: 500; color: var(--text-dim);
-  cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s var(--ease); user-select: none;
-}
-.sub-tab:hover { color: var(--text-sub); }
-.sub-tab.active { color: var(--text); border-bottom-color: var(--text); }
-
 /* ── Tab panels ── */
 .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
 .tab-panel.active { display: flex; animation: fadeIn 0.2s var(--ease); }
@@ -356,29 +347,6 @@ html, body {
 }
 .btn-danger:hover:not(:disabled) { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.15); }
 
-/* ── Context panel ── */
-.ctx-toggle {
-  padding: 6px 16px; font-size: 12px; color: var(--text-dim); cursor: pointer;
-  border-bottom: 1px solid var(--border); user-select: none; transition: color 0.15s;
-}
-.ctx-toggle:hover { color: var(--text-sub); }
-.ctx-toggle.open { color: var(--text-sub); }
-.ctx-panel { padding: 8px 16px 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; animation: slideDown 0.2s var(--ease); }
-.ctx-panel.hidden { display: none; }
-.ctx-row { display: flex; gap: 8px; align-items: center; }
-.ctx-label { font-size: 12px; font-weight: 600; color: var(--text-dim); width: 44px; flex-shrink: 0; }
-.ctx-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: var(--text); outline: none; font-family: var(--font); min-width: 0; }
-.ctx-input:focus { border-color: var(--accent); }
-.ctx-input::placeholder { color: var(--text-dim); }
-
-/* ── Image drop zone ── */
-.img-drop {
-  flex: 1; min-height: 120px; border: 2px dashed var(--border); border-radius: 12px;
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-  transition: border-color 0.2s;
-}
-.img-drop:hover, .img-drop.dragover { border-color: var(--accent); }
-
 /* ── Resize grips ── */
 .resize-edge {
   position: fixed; top: 0; width: 6px; height: 100%; z-index: 200;
@@ -444,8 +412,6 @@ html, body {
   <!-- Tabs -->
   <div class="tabs">
     <div class="tab active" data-panel="review">Review</div>
-    <div class="tab" data-panel="generate">Generate</div>
-    <div class="tab" data-panel="tokens">Tokens</div>
     <div class="tab" data-panel="manage">Manage</div>
   </div>
 
@@ -492,62 +458,6 @@ html, body {
     </div>
   </div>
 
-  <!-- ═══ GENERATE TAB ═══ -->
-  <div class="tab-panel" id="panel-generate">
-    <div class="sub-tabs">
-      <span class="sub-tab active" data-gen="prompt">自然言語</span>
-      <span class="sub-tab" data-gen="image">Image</span>
-      <span class="sub-tab" data-gen="code">Code</span>
-      <span class="sub-tab" data-gen="history">履歴</span>
-    </div>
-    <!-- Context（全モード共通、折畳み） -->
-    <div class="ctx-toggle" id="ctxToggle">Context（5W1H）▾</div>
-    <div class="ctx-panel hidden" id="ctxPanel">
-      <div class="ctx-row"><span class="ctx-label">What</span><input class="ctx-input" id="ctxWhat" placeholder="何を作るか（例: SaaS管理画面のダッシュボード）" /></div>
-      <div class="ctx-row"><span class="ctx-label">Who</span><input class="ctx-input" id="ctxWho" placeholder="誰が使うか（例: 40-55歳の現場作業者）" /></div>
-      <div class="ctx-row"><span class="ctx-label">Why</span><input class="ctx-input" id="ctxWhy" placeholder="ビジネス目的（例: 操作時間を50%削減）" /></div>
-      <div class="ctx-row"><span class="ctx-label">Where</span><input class="ctx-input" id="ctxWhere" placeholder="プラットフォーム（例: デスクトップWeb / iPad）" /></div>
-      <div class="ctx-row"><span class="ctx-label">Stack</span><input class="ctx-input" id="ctxStack" placeholder="技術スタック（例: React, MUI v5, TypeScript）" /></div>
-      <div class="ctx-row">
-        <span class="ctx-label">DS</span>
-        <select class="ctx-input" id="ctxDS" style="font-family:var(--font)">
-          <option value="">なし（汎用）</option>
-          <option value="mui">MUI (Material UI)</option>
-          <option value="tailwind">Tailwind CSS</option>
-        </select>
-      </div>
-    </div>
-    <div class="panel-body" style="padding-bottom:0">
-      <!-- 自然言語モード -->
-      <textarea class="prompt" id="prompt" placeholder="作りたいUIを自然言語で記述...&#10;&#10;例: ボタンのバリアントセット（Primary/Secondary × S/M/L）&#10;例: カード一覧画面&#10;例: SaaS向けデザイントークン"></textarea>
-      <!-- Imageモード -->
-      <div class="hidden" id="imageArea" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:0">
-        <div class="img-drop" id="imgDrop">
-          <div style="text-align:center;color:var(--text-dim);line-height:1.8">Ctrl+V でキャプチャ貼り付け<br>ドラッグ＆ドロップ / クリックして選択</div>
-          <input type="file" id="imgFile" accept="image/*" style="display:none" />
-        </div>
-        <img id="imgPreviewEl" class="hidden" style="max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border)" />
-        <textarea class="prompt" id="imgPrompt" style="flex:0;min-height:60px" placeholder="画像に対する指示（例: このUIをFigmaコンポーネントとして再現して）"></textarea>
-      </div>
-      <!-- Codeモード -->
-      <textarea class="json-input hidden" id="codeInput" placeholder="React / HTML / Tailwind コードを貼り付け..."></textarea>
-      <!-- 履歴モード -->
-      <div class="hidden" id="genHistoryArea" style="flex:1;overflow-y:auto"></div>
-      <!-- 共通 -->
-      <div class="preview hidden" id="genPreview"></div>
-      <div class="log" id="genLog"></div>
-    </div>
-  </div>
-
-  <!-- ═══ TOKENS TAB ═══ -->
-  <div class="tab-panel" id="panel-tokens">
-    <div class="panel-body" style="padding-bottom:0">
-      <div class="section-title">W3C Design Tokens JSON</div>
-      <textarea class="json-input" id="tokenJson" placeholder='{ "color": { "primary": { "$type": "color", "$value": "#2563EB" } }, "spacing": { "sm": { "$type": "number", "$value": 8 } } }'></textarea>
-      <div class="log" id="tokenLog"></div>
-    </div>
-  </div>
-
   <!-- ═══ MANAGE TAB ═══ -->
   <div class="tab-panel" id="panel-manage">
     <div class="panel-body">
@@ -572,17 +482,7 @@ html, body {
     <!-- Review actions -->
     <div class="status hidden" id="statusReview"><span class="spinner"></span><span id="statusReviewText">分析中...</span></div>
     <div class="btn-row hidden" id="actReview"><button class="btn btn-primary" id="btnReview">Review</button></div>
-    <!-- Generate actions (独立) -->
-    <div class="status hidden" id="statusGen"><span class="spinner"></span><span id="statusGenText">生成中...</span></div>
-    <div class="btn-row hidden" id="actGenInput"><button class="btn btn-primary" id="btnRun">生成 →</button></div>
-    <div class="btn-row hidden" id="actGenPreview">
-      <button class="btn btn-secondary" id="btnCancel">キャンセル</button>
-      <button class="btn btn-primary" id="btnConfirm">確定して生成</button>
-    </div>
-    <!-- Tokens actions (独立) -->
-    <div class="status hidden" id="statusTokens"><span class="spinner"></span>インポート中...</div>
-    <div class="btn-row hidden" id="actTokens"><button class="btn btn-primary" id="btnImport">Import →</button></div>
-    <!-- Undo (shared) -->
+    <!-- Undo -->
     <div class="btn-row hidden" id="actUndo">
       <button class="btn btn-secondary" id="btnUndo" style="font-size:12px">↩ 元に戻す</button>
       <button class="btn btn-danger" id="btnUndoAll" style="font-size:12px">全Undo</button>
@@ -600,7 +500,6 @@ function isGemini(m) { return m.indexOf('gemini') === 0 }
 function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
 var currentTab = 'review'
-var currentSpec = null
 
 // ══════════════════════════════════════════════════════════════
 // タブ切替
@@ -620,7 +519,6 @@ var currentReview = null
 var selectedNodes = []
 var selectedComponentSet = null
 var reviewLoading = false
-var genLoading = false
 var reviewMode = 'ia'
 
 // レビュー観点チップ
@@ -632,23 +530,11 @@ document.querySelectorAll('.r-chip').forEach(function(c) {
 })
 
 function updateBottomBar() {
-  // 全非表示
-  hide($('statusReview')); hide($('actReview')); hide($('actReviewConfirm'))
-  hide($('statusGen')); hide($('actGenInput')); hide($('actGenPreview'))
-  hide($('statusTokens')); hide($('actTokens'))
-
+  hide($('statusReview')); hide($('actReview'))
   if (currentTab === 'review') {
     if (reviewLoading) { show($('statusReview')) }
     else if (selectedNodes.length) { show($('actReview')) }
   }
-  // Generate
-  if (currentTab === 'generate') {
-    if (genLoading) { show($('statusGen')) }
-    else if (currentSpec) { show($('actGenPreview')) }
-    else if (genMode !== 'history') { show($('actGenInput')) }
-  }
-  // Tokens
-  if (currentTab === 'tokens') { show($('actTokens')) }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -739,12 +625,10 @@ window.onmessage = function(event) {
 
   // Generate
   if (msg.type === 'done') {
-    genLoading = false; $('btnRun').disabled = false; currentSpec = null; updateBottomBar()
     addLog('genLog', 'ok', '✓ ' + (msg.summary || '生成完了'))
     if (msg.undoCount > 0) show($('actUndo'))
   }
   if (msg.type === 'error') {
-    genLoading = false; $('btnRun').disabled = false; currentSpec = null; updateBottomBar()
     addLog('genLog', 'error', msg.error)
   }
 
@@ -780,65 +664,6 @@ window.onmessage = function(event) {
 // ══════════════════════════════════════════════════════════════
 // システムプロンプト（Material Design 3準拠）
 // ══════════════════════════════════════════════════════════════
-var SYSTEM_PROMPT = [
-'あなたはFigma上で直接生成可能なJSON構造を出力するUIデザイナーです。日本語で出力。',
-'',
-'出力形式(JSONのみ):',
-'{"name":"名前","description":"概要",',
-'"variables":[{"collection":"名前","variables":[{"name":"token","type":"COLOR|FLOAT","value":"#hex|数値"}]}],',
-'"components":[{"name":"Button","variants":[{"props":{"Style":"Primary"},"fill":"#2563EB","textColor":"#FFF","label":"ボタン","fontSize":14,"fontWeight":"SemiBold","paddingX":24,"paddingY":12,"cornerRadius":12}]}],',
-'"frames":[ルートフレーム]}',
-'',
-'━━━ 色ルール ━━━',
-'背景: #FFFFFF  カード: #F8FAFC  入力欄: #F1F5F9  ボタン: #2563EB',
-'テキスト: #0F172A  サブ: #475569  メタ: #94A3B8  ボーダー: #E2E8F0',
-'',
-'━━━ 最重要ルール ━━━',
-'- グループ化用の透明コンテナは fill を書かない（fillキー自体を省略）',
-'- fill="#000000" の使用は絶対禁止。黒背景のFRAMEは一切作らない',
-'- ルートフレームのfillは必ず "#FFFFFF"',
-'- ボタンは cornerRadius:12, paddingY:12（高さは自動。height指定しない）',
-'- ボタンに fillWidth:true を使わない（ボタンは内容幅に合わせる。フォーム内の送信ボタンのみ例外）',
-'- カード・入力フィールドは fillWidth:true',
-'- コンポーネント生成時は components のみ出力。frames（ショーケース/サンプル画面）は生成しない',
-'- 画面UIの生成を明示的に依頼された場合のみ frames を出力する',
-'',
-'━━━ 構造テンプレート ━━━',
-'',
-'■ ルートフレーム:',
-'{"name":"画面名","type":"FRAME","width":390,"fill":"#FFFFFF","layoutMode":"VERTICAL","padding":24,"itemSpacing":16,"counterAxisSizingMode":"FIXED","children":[...]}',
-'',
-'■ 透明コンテナ（セクションまとめ用）:',
-'{"type":"FRAME","name":"CardList","layoutMode":"VERTICAL","itemSpacing":12,"fillWidth":true,"children":[...]}',
-'※ fill を書かない = 透明',
-'',
-'■ Filled Button（内容幅。fillWidth禁止）:',
-'{"type":"FRAME","name":"Button","layoutMode":"HORIZONTAL","paddingX":24,"paddingY":12,"fill":"#2563EB","cornerRadius":12,"primaryAxisAlignItems":"CENTER","counterAxisAlignItems":"CENTER","children":[',
-'  {"type":"TEXT","text":"ボタン","fontSize":14,"fontWeight":"SemiBold","color":"#FFFFFF"}]}',
-'',
-'■ Outlined Button:',
-'{"type":"FRAME","name":"Button","layoutMode":"HORIZONTAL","paddingX":24,"paddingY":12,"cornerRadius":12,"stroke":"#E2E8F0","strokeWidth":1,"primaryAxisAlignItems":"CENTER","counterAxisAlignItems":"CENTER","children":[',
-'  {"type":"TEXT","text":"ボタン","fontSize":14,"fontWeight":"SemiBold","color":"#2563EB"}]}',
-'',
-'■ ボタン横並び（ショーケース用）:',
-'{"type":"FRAME","name":"ButtonRow","layoutMode":"HORIZONTAL","itemSpacing":12,"fillWidth":true,"children":[',
-'  (上記ボタンを並べる)]}',
-'',
-'■ 入力フィールド:',
-'{"type":"FRAME","name":"SearchBar","layoutMode":"HORIZONTAL","paddingX":16,"paddingY":14,"fill":"#F1F5F9","cornerRadius":12,"stroke":"#E2E8F0","strokeWidth":1,"fillWidth":true,"counterAxisAlignItems":"CENTER","children":[',
-'  {"type":"TEXT","text":"検索...","fontSize":14,"color":"#94A3B8"}]}',
-'',
-'■ カード:',
-'{"type":"FRAME","name":"Card","layoutMode":"HORIZONTAL","paddingX":16,"paddingY":16,"fill":"#F8FAFC","cornerRadius":12,"fillWidth":true,"itemSpacing":12,"counterAxisAlignItems":"CENTER","children":[',
-'  {"type":"ELLIPSE","name":"Icon","width":44,"height":44,"fill":"#DBEAFE"},',
-'  {"type":"FRAME","name":"Content","layoutMode":"VERTICAL","itemSpacing":4,"fillWidth":true,"children":[',
-'    {"type":"TEXT","text":"タイトル","fontSize":16,"fontWeight":"SemiBold","color":"#0F172A"},',
-'    {"type":"TEXT","text":"説明","fontSize":14,"color":"#475569"}]}]}',
-'',
-'■ セクション見出し:',
-'{"type":"TEXT","text":"見出し","fontSize":14,"fontWeight":"SemiBold","color":"#0F172A","fillWidth":true}',
-].join('\n')
-
 // ══════════════════════════════════════════════════════════════
 // AI API呼び出し
 // ══════════════════════════════════════════════════════════════
@@ -862,69 +687,6 @@ function callAI(prompt) {
   return p.then(function(c) { if(!c) throw new Error('空の応答'); try{return JSON.parse(c)}catch(e){ var m=c.match(/```(?:json)?\s*([\s\S]*?)\s*```/); if(m)return JSON.parse(m[1]); throw new Error('JSON解析失敗') } })
 }
 
-// 画像付きAI呼び出し（Vision API）
-function callAIWithImage(systemPrompt, userText, dataUrl) {
-  var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
-  if (!apiKey) return Promise.reject(new Error('APIキーを設定してください'))
-
-  // data:image/png;base64,xxxx → mimeType と base64 を分離
-  var parts = dataUrl.split(',')
-  var mimeMatch = parts[0].match(/data:(.*?);/)
-  var mimeType = mimeMatch ? mimeMatch[1] : 'image/png'
-  var base64Data = parts[1]
-
-  var p
-  if (isGemini(model)) {
-    p = fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        system_instruction:{parts:[{text:systemPrompt}]},
-        contents:[{parts:[{text:userText},{inlineData:{mimeType:mimeType,data:base64Data}}]}],
-        generationConfig:{response_mime_type:'application/json',temperature:0.5}
-      })
-    }).then(function(r) { if(!r.ok) { if(r.status===429) throw new Error('レート制限。OpenAIに切り替えてください'); return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'Gemini error '+r.status)}) } return r.json() })
-     .then(function(d) { return d.candidates[0].content.parts[0].text })
-  } else {
-    p = fetch('https://api.openai.com/v1/chat/completions', {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-      body:JSON.stringify({
-        model:model,
-        messages:[
-          {role:'system',content:systemPrompt},
-          {role:'user',content:[
-            {type:'text',text:userText},
-            {type:'image_url',image_url:{url:dataUrl,detail:'high'}}
-          ]}
-        ],
-        response_format:{type:'json_object'},
-        max_completion_tokens:8000
-      })
-    }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'OpenAI error')}); return r.json() })
-     .then(function(d) { return d.choices[0].message.content })
-  }
-  return p.then(function(c) { if(!c) throw new Error('空の応答'); try{return JSON.parse(c)}catch(e){ var m=c.match(/```(?:json)?\s*([\s\S]*?)\s*```/); if(m)return JSON.parse(m[1]); throw new Error('JSON解析失敗') } })
-}
-
-// カスタムプロンプト版
-function callAIWithPrompt(systemPrompt, userContent) {
-  var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
-  if (!apiKey) return Promise.reject(new Error('APIキーを設定してください'))
-  var p
-  if (isGemini(model)) {
-    p = fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ system_instruction:{parts:[{text:systemPrompt}]}, contents:[{parts:[{text:userContent}]}], generationConfig:{response_mime_type:'application/json',temperature:0.3} })
-    }).then(function(r) { if(!r.ok) { if(r.status===429) throw new Error('レート制限。OpenAIに切り替えてください'); return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'Gemini error '+r.status)}) } return r.json() })
-     .then(function(d) { return d.candidates[0].content.parts[0].text })
-  } else {
-    p = fetch('https://api.openai.com/v1/chat/completions', {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-      body:JSON.stringify({ model:model, messages:[{role:'system',content:systemPrompt},{role:'user',content:userContent}], response_format:{type:'json_object'}, max_completion_tokens:8000 })
-    }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'OpenAI error')}); return r.json() })
-     .then(function(d) { return d.choices[0].message.content })
-  }
-  return p.then(function(c) { if(!c) throw new Error('空の応答'); try{return JSON.parse(c)}catch(e){ var m=c.match(/```(?:json)?\s*([\s\S]*?)\s*```/); if(m)return JSON.parse(m[1]); throw new Error('JSON解析失敗') } })
-}
 
 // ══════════════════════════════════════════════════════════════
 // Review: ノード→テキスト変換
@@ -1177,421 +939,6 @@ $('reviewPreview').addEventListener('click', function(ev) {
 // Review結果をクリア（新しいレビュー実行時に自動クリア）
 
 // ══════════════════════════════════════════════════════════════
-// Generate: プレビュー描画
-// ══════════════════════════════════════════════════════════════
-// Review: 履歴表示
-// ══════════════════════════════════════════════════════════════
-function renderReviewHistory(history) {
-  if (!history.length) { hide($('reviewHistorySection')); return }
-  show($('reviewHistorySection'))
-  var h = ''
-  for (var i = 0; i < history.length; i++) {
-    var e = history[i]
-    var scoreClass = e.score >= 75 ? 'high' : e.score >= 50 ? 'mid' : 'low'
-    var d = new Date(e.timestamp)
-    var dateStr = (d.getMonth()+1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + ('0'+d.getMinutes()).slice(-2)
-    h += '<div class="hist-item" data-id="' + e.id + '">'
-    h += '<div class="hist-head">'
-    h += '<span class="hist-score ' + scoreClass + '">' + e.score + '</span>'
-    h += '<span class="hist-name">' + e.frameName + '</span>'
-    h += '<span class="hist-date">' + dateStr + '</span>'
-    h += '<button class="hist-del" data-del="' + e.id + '" title="削除">×</button>'
-    h += '</div>'
-    h += '<div class="hist-summary">' + (e.asIs || '') + '</div>'
-    if (e.toBe) h += '<div class="hist-tobe">改善方針: ' + e.toBe + '</div>'
-    h += '</div>'
-  }
-  $('reviewHistoryList').innerHTML = h
-}
-
-// 履歴クリック → 展開/折畳
-$('reviewHistoryList').addEventListener('click', function(ev) {
-  var delBtn = ev.target.closest('[data-del]')
-  if (delBtn) {
-    ev.stopPropagation()
-    parent.postMessage({ pluginMessage: { type: 'delete-review', id: delBtn.getAttribute('data-del') } }, '*')
-    return
-  }
-  var item = ev.target.closest('.hist-item')
-  if (item) item.classList.toggle('expanded')
-})
-
-$('btnClearHistory').addEventListener('click', function() {
-  if (confirm('レビュー履歴を全て削除しますか？')) {
-    parent.postMessage({ pluginMessage: { type: 'clear-review-history' } }, '*')
-  }
-})
-
-// ══════════════════════════════════════════════════════════════
-// Generate: プレビュー描画
-// ══════════════════════════════════════════════════════════════
-function renderPreview(spec) {
-  var h = '<div class="pv-header"><strong>' + (spec.name||'Design System') + '</strong></div>'
-  if (spec.description) h += '<div class="pv-desc">' + spec.description + '</div>'
-  if (spec.variables && spec.variables.length) {
-    for (var i=0; i<spec.variables.length; i++) {
-      var col=spec.variables[i]; h+='<div class="pv-section"><div class="pv-title">📦 '+col.collection+' ('+col.variables.length+')</div>'
-      for (var j=0;j<Math.min(col.variables.length,8);j++) { var v=col.variables[j]; h+=v.type==='COLOR'?'<div class="pv-item"><span class="pv-color" style="background:'+v.value+'"></span>'+v.name+'</div>':'<div class="pv-item">'+v.name+': '+v.value+'</div>' }
-      if (col.variables.length>8) h+='<div class="pv-item" style="color:var(--text-dim)">...他 '+(col.variables.length-8)+'件</div>'
-      h+='</div>'
-    }
-  }
-  if (spec.components && spec.components.length) {
-    for (var i=0;i<spec.components.length;i++) {
-      var comp=spec.components[i]; h+='<div class="pv-section"><div class="pv-title">🧩 '+comp.name+' ('+comp.variants.length+' variants)</div>'
-      for (var j=0;j<Math.min(comp.variants.length,6);j++) { var v=comp.variants[j]; var ps=Object.keys(v.props).map(function(k){return k+'='+v.props[k]}).join(', '); var dot=(v.fill&&v.fill!=='transparent')?'<span class="pv-color" style="background:'+v.fill+'"></span>':''; h+='<div class="pv-variant">'+dot+ps+'</div>' }
-      if (comp.variants.length>6) h+='<div class="pv-variant" style="color:var(--text-dim)">...他 '+(comp.variants.length-6)+'件</div>'
-      h+='</div>'
-    }
-  }
-  if (spec.frames && spec.frames.length) {
-    for (var i=0;i<spec.frames.length;i++) { var fr=spec.frames[i]; var cc=(fr.children&&fr.children.length)||0; h+='<div class="pv-section"><div class="pv-title">📱 '+(fr.name||'Frame')+' ('+(fr.width||'?')+'×'+(fr.height||'?')+')</div><div class="pv-item">'+cc+' children, '+(fr.layoutMode||'absolute')+'</div></div>' }
-  }
-  $('genPreview').innerHTML = h
-}
-
-// ══════════════════════════════════════════════════════════════
-// Generate: サブタブ切替
-// ══════════════════════════════════════════════════════════════
-var genMode = 'prompt' // 'prompt' | 'code' | 'history'
-
-var imgBase64 = null
-
-document.querySelectorAll('.sub-tab').forEach(function(t) {
-  t.addEventListener('click', function() {
-    genMode = t.getAttribute('data-gen')
-    document.querySelectorAll('.sub-tab').forEach(function(s) { s.classList.toggle('active', s.getAttribute('data-gen') === genMode) })
-    hide($('prompt')); hide($('codeInput')); hide($('genHistoryArea')); hide($('genPreview')); hide($('imageArea'))
-    if (genMode === 'prompt') show($('prompt'))
-    if (genMode === 'image') show($('imageArea'))
-    if (genMode === 'code') show($('codeInput'))
-    if (genMode === 'history') { show($('genHistoryArea')); parent.postMessage({ pluginMessage: { type: 'load-gen-history' } }, '*') }
-    currentSpec = null; updateBottomBar()
-  })
-})
-
-// Context折畳み
-$('ctxToggle').addEventListener('click', function() {
-  $('ctxPanel').classList.toggle('hidden')
-  $('ctxToggle').classList.toggle('open')
-  $('ctxToggle').textContent = $('ctxPanel').classList.contains('hidden') ? 'Context（5W1H）▾' : 'Context（5W1H）▴'
-})
-
-// 画像ドロップ/選択
-$('imgDrop').addEventListener('click', function() { $('imgFile').click() })
-$('imgDrop').addEventListener('dragover', function(e) { e.preventDefault(); $('imgDrop').classList.add('dragover') })
-$('imgDrop').addEventListener('dragleave', function() { $('imgDrop').classList.remove('dragover') })
-$('imgDrop').addEventListener('drop', function(e) { e.preventDefault(); $('imgDrop').classList.remove('dragover'); if (e.dataTransfer.files.length) loadImage(e.dataTransfer.files[0]) })
-$('imgFile').addEventListener('change', function(e) { if (e.target.files.length) loadImage(e.target.files[0]) })
-
-function loadImage(file) {
-  if (!file.type.startsWith('image/')) return
-  var reader = new FileReader()
-  reader.onload = function(e) {
-    imgBase64 = e.target.result
-    $('imgPreviewEl').src = imgBase64
-    show($('imgPreviewEl'))
-    $('imgDrop').style.display = 'none'
-  }
-  reader.readAsDataURL(file)
-}
-
-// Ctrl+V でクリップボード画像を貼り付け
-document.addEventListener('paste', function(e) {
-  if (genMode !== 'image') return
-  var items = e.clipboardData && e.clipboardData.items
-  if (!items) return
-  for (var i = 0; i < items.length; i++) {
-    if (items[i].type.indexOf('image') !== -1) {
-      var file = items[i].getAsFile()
-      if (file) loadImage(file)
-      e.preventDefault()
-      return
-    }
-  }
-})
-
-// ══════════════════════════════════════════════════════════════
-// Design System プリセット（アプリ内蔵）
-// ══════════════════════════════════════════════════════════════
-var DS_PRESETS = {
-  mui: [
-'【Design System: MUI (Material UI) — M2ベース】',
-'必ず以下の仕様に厳密に従ってコンポーネントを生成すること。',
-'',
-'■ カラーパレット（MUI default theme）:',
-'primary:   main #1976d2, light #42a5f5, dark #1565c0, contrastText #fff',
-'secondary: main #9c27b0, light #ba68c8, dark #7b1fa2, contrastText #fff',
-'error:     main #d32f2f, light #ef5350, dark #c62828, contrastText #fff',
-'warning:   main #ed6c02, light #ff9800, dark #e65100, contrastText #fff',
-'info:      main #0288d1, light #03a9f4, dark #01579b, contrastText #fff',
-'success:   main #2e7d32, light #4caf50, dark #1b5e20, contrastText #fff',
-'inherit:   main #9e9e9e',
-'',
-'■ Button:',
-'variant: contained（塗り/メインアクション）| outlined（枠線/サブアクション）| text（テキストのみ/キャンセル等）',
-'color: primary | secondary | success | error | warning | info | inherit',
-'size: small（padding 4px 10px, fontSize 13）| medium（padding 6px 16px, fontSize 14）| large（padding 8px 22px, fontSize 15）',
-'borderRadius: 4px（MUI default）',
-'textTransform: uppercase（MUI default。日本語プロジェクトでは none にカスタムされることが多い）',
-'disabled: opacity 0.38',
-'',
-'■ components 生成時のバリアント軸:',
-'props で {"variant":"contained","color":"primary","size":"medium"} のように3軸で定義',
-'最低限: variant(contained/outlined/text) × color(primary/secondary/error) × size(medium) = 9バリアント',
-'',
-'■ 共通トークン:',
-'borderRadius: 4px（ボタン/入力）, 8px（カード）, 16px（ダイアログ）',
-'elevation: shadow "0 2px 4px rgba(0,0,0,0.1)"（MUIではfillで表現: Level1 #fafafa, Level2 #f5f5f5）',
-'spacing単位: 8px（theme.spacing(1)=8px, spacing(2)=16px, spacing(3)=24px）',
-'typography: fontFamily Roboto, fontSize body1:16 body2:14 caption:12 h6:20 h5:24 h4:34',
-'',
-'■ その他コンポーネント:',
-'TextField: variant filled|outlined|standard, size small|medium',
-'Chip: variant filled|outlined, color 同上, size small|medium',
-'Alert: severity success|info|warning|error, variant filled|outlined|standard',
-'Switch/Checkbox/Radio: color 同上, size small|medium',
-'Card: elevation 0-24, variant elevation|outlined',
-  ].join('\n'),
-
-  tailwind: [
-'【Design System: Tailwind CSS】',
-'Tailwind のユーティリティクラスに基づいたトークンで生成すること。',
-'',
-'■ カラー:',
-'blue-500 #3b82f6, blue-600 #2563eb, blue-700 #1d4ed8',
-'gray-50 #f9fafb, gray-100 #f3f4f6, gray-200 #e5e7eb, gray-500 #6b7280, gray-900 #111827',
-'red-500 #ef4444, green-500 #22c55e, yellow-500 #eab308',
-'',
-'■ スペーシング: 1=4px, 2=8px, 3=12px, 4=16px, 5=20px, 6=24px, 8=32px',
-'■ borderRadius: rounded-sm=2, rounded=4, rounded-md=6, rounded-lg=8, rounded-xl=12, rounded-2xl=16, rounded-full=9999',
-'■ fontSize: text-xs=12, text-sm=14, text-base=16, text-lg=18, text-xl=20, text-2xl=24',
-'■ fontWeight: font-normal=400, font-medium=500, font-semibold=600, font-bold=700',
-  ].join('\n'),
-}
-
-function getContextString() {
-  var parts = []
-  var w = $('ctxWhat').value.trim(); if (w) parts.push('What: ' + w)
-  var who = $('ctxWho').value.trim(); if (who) parts.push('Who: ' + who)
-  var why = $('ctxWhy').value.trim(); if (why) parts.push('Why: ' + why)
-  var where = $('ctxWhere').value.trim(); if (where) parts.push('Where: ' + where)
-  var stack = $('ctxStack').value.trim(); if (stack) parts.push('Stack: ' + stack)
-  var ctx = parts.length ? '\n\n【ビジネスコンテキスト】\n' + parts.join('\n') : ''
-
-  // DS プリセット注入
-  var ds = $('ctxDS').value
-  if (ds && DS_PRESETS[ds]) ctx += '\n\n' + DS_PRESETS[ds]
-
-  return ctx
-}
-
-// ══════════════════════════════════════════════════════════════
-// Generate: 履歴表示
-// ══════════════════════════════════════════════════════════════
-var genHistoryData = []
-
-function renderGenHistory(history) {
-  genHistoryData = history
-  var el = $('genHistoryArea')
-  if (!history.length) { el.innerHTML = '<div class="empty-state" style="padding:16px">生成履歴なし</div>'; return }
-  var h = ''
-  for (var i = 0; i < history.length; i++) {
-    var e = history[i]
-    var d = new Date(e.timestamp)
-    var dateStr = (d.getMonth()+1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + ('0'+d.getMinutes()).slice(-2)
-    var modeLabel = e.mode === 'code' ? 'Code' : '自然言語'
-    var hasSpec = e.spec ? true : false
-    h += '<div class="hist-item" data-gen-idx="' + i + '">'
-    h += '<div class="hist-head">'
-    h += '<span style="font-size:12px;color:var(--accent);font-weight:600;font-family:var(--mono)">' + modeLabel + '</span>'
-    h += '<span class="hist-name">' + (e.name || 'Generated') + '</span>'
-    h += '<span class="hist-date">' + dateStr + '</span>'
-    h += '<button class="hist-del" data-gen-del="' + e.id + '" title="削除">×</button>'
-    h += '</div>'
-    h += '<div class="hist-summary">' + (e.input || '').slice(0, 150) + '</div>'
-    h += '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:nowrap">'
-    h += '<button style="padding:4px 12px;font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text-sub);cursor:pointer;white-space:nowrap;font-family:var(--font)" data-gen-reuse="' + i + '">入力を復元</button>'
-    if (hasSpec) h += '<button style="padding:4px 12px;font-size:12px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;white-space:nowrap;font-family:var(--font)" data-gen-regen="' + i + '">再生成</button>'
-    h += '</div>'
-    h += '</div>'
-  }
-  el.innerHTML = h
-}
-
-$('genHistoryArea').addEventListener('click', function(ev) {
-  // 削除
-  var delBtn = ev.target.closest('[data-gen-del]')
-  if (delBtn) {
-    ev.stopPropagation()
-    parent.postMessage({ pluginMessage: { type: 'delete-gen-history', id: delBtn.getAttribute('data-gen-del') } }, '*')
-    return
-  }
-  // 入力を復元
-  var reuseBtn = ev.target.closest('[data-gen-reuse]')
-  if (reuseBtn) {
-    var idx = parseInt(reuseBtn.getAttribute('data-gen-reuse'))
-    var entry = genHistoryData[idx]
-    if (!entry) return
-    // モード切替 + 入力復元
-    var targetMode = entry.mode === 'code' ? 'code' : 'prompt'
-    document.querySelector('.sub-tab[data-gen="' + targetMode + '"]').click()
-    if (targetMode === 'code') { $('codeInput').value = entry.input || '' }
-    else { $('prompt').value = entry.input || '' }
-    return
-  }
-  // 再生成（保存された spec をそのまま使用）
-  var regenBtn = ev.target.closest('[data-gen-regen]')
-  if (regenBtn) {
-    var idx2 = parseInt(regenBtn.getAttribute('data-gen-regen'))
-    var entry2 = genHistoryData[idx2]
-    if (!entry2 || !entry2.spec) return
-    currentSpec = entry2.spec
-    // プレビューモードに切替
-    document.querySelector('.sub-tab[data-gen="prompt"]').click()
-    renderPreview(currentSpec)
-    hide($('prompt')); show($('genPreview')); updateBottomBar()
-    return
-  }
-})
-
-// ══════════════════════════════════════════════════════════════
-// Generate: Code → Figma 変換プロンプト
-// ══════════════════════════════════════════════════════════════
-var CODE_TO_FIGMA_PROMPT = [
-'あなたはReact/HTML/TailwindのコードをFigmaノード構造に変換するコンバーターです。',
-'入力されたコードを解析し、Figma上で再現可能なJSON構造を出力してください。',
-'',
-'出力形式（JSONのみ）:',
-'{"name":"コンポーネント名","frames":[{"name":"画面名","type":"FRAME","width":390,"fill":"#FFFFFF","layoutMode":"VERTICAL","padding":24,"itemSpacing":16,"counterAxisSizingMode":"FIXED","children":[...]}]}',
-'',
-'変換ルール:',
-'- className の Tailwind を Figma プロパティに変換:',
-'  p-4→padding:16  px-6→paddingX:24  py-3→paddingY:12',
-'  gap-4→itemSpacing:16  rounded-xl→cornerRadius:12  rounded-lg→cornerRadius:8',
-'  bg-white→fill:#FFFFFF  bg-blue-600→fill:#2563EB  bg-gray-100→fill:#F1F5F9',
-'  text-white→color:#FFFFFF  text-gray-900→color:#0F172A  text-gray-500→color:#64748B',
-'  text-2xl→fontSize:24  text-xl→fontSize:20  text-lg→fontSize:18  text-sm→fontSize:14  text-xs→fontSize:12',
-'  font-bold→fontWeight:Bold  font-semibold→fontWeight:SemiBold  font-medium→fontWeight:Medium',
-'  flex→layoutMode:HORIZONTAL  flex-col→layoutMode:VERTICAL',
-'  w-full→fillWidth:true  space-y-4→itemSpacing:16',
-'  border→stroke:#E2E8F0,strokeWidth:1  shadow→（無視）',
-'- <div>→FRAME  <span>/<p>/<h1-h6>→TEXT  <button>→FRAME(ボタン)  <input>→FRAME(入力欄)',
-'- <img>/<svg>/<Icon>→ELLIPSE(プレースホルダー)',
-'- 全コンテナにlayoutMode必須。fill未指定のコンテナは透明（fillキー省略）',
-'- テキストは日本語に翻訳しない。元のまま維持',
-'- fill=#000000 禁止。ルートは fill:#FFFFFF',
-].join('\n')
-
-// ══════════════════════════════════════════════════════════════
-// Generate: アクション
-// ══════════════════════════════════════════════════════════════
-function doGenerate() {
-  var input, promptText, imageData = null
-  if (genMode === 'image') {
-    if (!imgBase64) { addLog('genLog', 'error', '画像を選択してください'); return }
-    input = ($('imgPrompt').value.trim() || 'このUIをFigmaコンポーネントとして再現してください') + getContextString()
-    imageData = imgBase64
-    promptText = null
-  } else if (genMode === 'code') {
-    input = $('codeInput').value.trim()
-    if (!input) return
-    input += getContextString()
-    promptText = CODE_TO_FIGMA_PROMPT
-  } else {
-    input = $('prompt').value.trim()
-    if (!input) return
-    input += getContextString()
-    promptText = null
-  }
-
-  // ComponentSet 選択中なら既存構造を文脈に追加
-  if (selectedComponentSet && genMode === 'prompt') {
-    var csCtx = '\n\n【既存ComponentSet: ' + selectedComponentSet.name + '】\n'
-    csCtx += '現在のバリアント:\n'
-    for (var vi = 0; vi < selectedComponentSet.variants.length; vi++) {
-      var v = selectedComponentSet.variants[vi]
-      csCtx += '- ' + v.name + (v.fill ? ' (fill:' + v.fill + ')' : '') + '\n'
-    }
-    csCtx += '\nユーザーの指示に従い、既存のスタイル（色・サイズ・padding・cornerRadius）を踏襲した新しいバリアントを components として出力してください。'
-    input = input + csCtx
-  }
-
-  $('btnRun').disabled = true; genLoading = true
-  $('statusGenText').textContent = selectedComponentSet ? '既存セットに追加中...' : (genMode === 'code' ? 'コードを変換中...' : 'AIが構造を生成中...')
-  updateBottomBar()
-
-  var p
-  if (imageData) {
-    p = callAIWithImage(SYSTEM_PROMPT, input, imageData)
-  } else if (promptText) {
-    p = callAIWithPrompt(promptText, input)
-  } else {
-    p = callAI(input)
-  }
-
-  p.then(function(spec) {
-    currentSpec = spec
-    renderPreview(spec)
-    hide($('prompt')); hide($('codeInput')); hide($('imageArea')); show($('genPreview'))
-    genLoading = false; updateBottomBar()
-  }).catch(function(e) {
-    genLoading = false; updateBottomBar(); $('btnRun').disabled = false
-    addLog('genLog', 'error', e.message)
-  })
-}
-
-function doConfirm() {
-  if (!currentSpec) return
-  genLoading = true; $('statusGenText').textContent = 'Figmaに反映中...'; updateBottomBar()
-
-  // 履歴に保存（入力テキスト全文 + spec）
-  var fullInput = genMode === 'code' ? $('codeInput').value.trim() : $('prompt').value.trim()
-  parent.postMessage({ pluginMessage: { type: 'save-gen-history', entry: {
-    id: String(Date.now()),
-    timestamp: Date.now(),
-    mode: genMode,
-    input: fullInput,
-    name: currentSpec.name || 'Generated',
-    spec: JSON.stringify(currentSpec).length < 50000 ? currentSpec : null,
-  }}}, '*')
-
-  // ComponentSet 選択中 + components がある場合は既存セットに追加
-  if (selectedComponentSet && currentSpec.components && currentSpec.components.length) {
-    var allVariants = []
-    for (var ci = 0; ci < currentSpec.components.length; ci++) {
-      allVariants = allVariants.concat(currentSpec.components[ci].variants)
-    }
-    parent.postMessage({ pluginMessage: { type: 'add-variants', componentSetId: selectedComponentSet.id, variants: allVariants } }, '*')
-  } else {
-    parent.postMessage({ pluginMessage: { type: 'generate', spec: currentSpec } }, '*')
-  }
-
-  currentSpec = null
-  if (genMode === 'image') { show($('imageArea')) }
-  else if (genMode === 'code') { show($('codeInput')) }
-  else { show($('prompt')) }
-  hide($('genPreview')); updateBottomBar()
-}
-
-function doCancel() {
-  currentSpec = null; hide($('genPreview'))
-  if (genMode === 'image') { show($('imageArea')) }
-  else if (genMode === 'code') { show($('codeInput')) }
-  else { show($('prompt')) }
-  updateBottomBar()
-}
-
-// ══════════════════════════════════════════════════════════════
-// Tokens: Import
-// ══════════════════════════════════════════════════════════════
-function doImportTokens() {
-  var json = $('tokenJson').value.trim(); if (!json) return
-  show($('statusTokens'))
-  parent.postMessage({ pluginMessage: { type: 'import-tokens', json: json } }, '*')
-}
-
-// ══════════════════════════════════════════════════════════════
 // Manage: コレクション一覧
 // ══════════════════════════════════════════════════════════════
 function renderCollections(list) {
@@ -1649,8 +996,6 @@ $('btnClearAll').addEventListener('click', function() { if (confirm('⚠ ファ�
 document.addEventListener('keydown', function(e) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
     e.preventDefault()
-    if (currentTab === 'generate') { if (currentSpec) doConfirm(); else doGenerate(); }
-    if (currentTab === 'tokens') doImportTokens()
   }
 })
 
