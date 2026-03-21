@@ -1578,7 +1578,7 @@ function postResize(w, h) {
 $('btnExpand').addEventListener('click', function() {
   isMaximized = !isMaximized
   if (isMaximized) {
-    postResize(Math.min(screen.width - 200, 1600), Math.min(screen.height - 150, 1200))
+    postResize(640, 860)
   } else {
     postResize(480, 680)
   }
