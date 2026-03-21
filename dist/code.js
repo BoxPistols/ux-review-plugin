@@ -799,6 +799,31 @@ figma.ui.onmessage = function(msg) {
     });
   }
 
+  // ── Generate: 履歴 CRUD ──
+  if (msg.type === "save-gen-history") {
+    figma.clientStorage.getAsync("gen_history").then(function(existing) {
+      var history = existing || [];
+      history.unshift(msg.entry);
+      if (history.length > 15) history = history.slice(0, 15);
+      return figma.clientStorage.setAsync("gen_history", history).then(function() {
+        figma.ui.postMessage({ type: "gen-history", history: history });
+      });
+    });
+  }
+  if (msg.type === "load-gen-history") {
+    figma.clientStorage.getAsync("gen_history").then(function(h) {
+      figma.ui.postMessage({ type: "gen-history", history: h || [] });
+    });
+  }
+  if (msg.type === "delete-gen-history") {
+    figma.clientStorage.getAsync("gen_history").then(function(existing) {
+      var history = (existing || []).filter(function(e) { return e.id !== msg.id; });
+      return figma.clientStorage.setAsync("gen_history", history).then(function() {
+        figma.ui.postMessage({ type: "gen-history", history: history });
+      });
+    });
+  }
+
   // ── Tokens: デザイントークンImport ──
   if (msg.type === "import-tokens") {
     try {

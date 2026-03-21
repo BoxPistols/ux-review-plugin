@@ -113,6 +113,15 @@ html, body {
   height: 2px; background: var(--accent); filter: blur(4px); opacity: 0.6;
 }
 
+/* ── Sub tabs ── */
+.sub-tabs { display: flex; gap: 0; flex-shrink: 0; padding: 0 16px; border-bottom: 1px solid var(--border); }
+.sub-tab {
+  padding: 8px 12px; font-size: 12px; font-weight: 500; color: var(--text-dim);
+  cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s var(--ease); user-select: none;
+}
+.sub-tab:hover { color: var(--text-sub); }
+.sub-tab.active { color: var(--text); border-bottom-color: var(--text); }
+
 /* ── Tab panels ── */
 .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
 .tab-panel.active { display: flex; animation: fadeIn 0.2s var(--ease); }
@@ -381,8 +390,19 @@ html, body {
 
   <!-- ═══ GENERATE TAB ═══ -->
   <div class="tab-panel" id="panel-generate">
+    <div class="sub-tabs">
+      <span class="sub-tab active" data-gen="prompt">自然言語</span>
+      <span class="sub-tab" data-gen="code">Code</span>
+      <span class="sub-tab" data-gen="history">履歴</span>
+    </div>
     <div class="panel-body" style="padding-bottom:0">
-      <textarea class="prompt" id="prompt" placeholder="作りたいUIを自然言語で記述...&#10;&#10;例: ボタンのバリアントセット（Primary/Secondary × S/M/L）&#10;例: カード一覧画面（作成前/作成後の2状態）&#10;例: SaaS向けデザイントークン"></textarea>
+      <!-- 自然言語モード -->
+      <textarea class="prompt" id="prompt" placeholder="作りたいUIを自然言語で記述...&#10;&#10;例: ボタンのバリアントセット（Primary/Secondary × S/M/L）&#10;例: カード一覧画面&#10;例: SaaS向けデザイントークン"></textarea>
+      <!-- Codeモード -->
+      <textarea class="json-input hidden" id="codeInput" placeholder="React / HTML / Tailwind コードを貼り付け...&#10;&#10;例:&#10;<div className=&quot;p-6 bg-white rounded-xl&quot;>&#10;  <h1 className=&quot;text-2xl font-bold&quot;>カード一覧</h1>&#10;  <button className=&quot;bg-blue-600 text-white px-6 py-3 rounded-lg&quot;>&#10;    新規作成&#10;  </button>&#10;</div>"></textarea>
+      <!-- 履歴モード -->
+      <div class="hidden" id="genHistoryArea" style="flex:1;overflow-y:auto"></div>
+      <!-- 共通 -->
       <div class="preview hidden" id="genPreview"></div>
       <div class="log" id="genLog"></div>
     </div>
@@ -483,7 +503,7 @@ function updateBottomBar() {
   if (currentTab === 'generate') {
     if (genLoading) { show($('statusGen')) }
     else if (currentSpec) { show($('actGenPreview')) }
-    else { show($('actGenInput')) }
+    else if (genMode !== 'history') { show($('actGenInput')) }
   }
   // Tokens
   if (currentTab === 'tokens') { show($('actTokens')) }
@@ -579,6 +599,9 @@ window.onmessage = function(event) {
     genLoading = false; $('btnRun').disabled = false; currentSpec = null; updateBottomBar()
     addLog('genLog', 'error', msg.error)
   }
+
+  // Generate history
+  if (msg.type === 'gen-history') { renderGenHistory(msg.history || []) }
 
   // Tokens
   if (msg.type === 'import-done') {
@@ -682,6 +705,27 @@ function callAI(prompt) {
     p = fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
       body:JSON.stringify({ model:model, messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:prompt}], response_format:{type:'json_object'}, max_completion_tokens:8000 })
+    }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'OpenAI error')}); return r.json() })
+     .then(function(d) { return d.choices[0].message.content })
+  }
+  return p.then(function(c) { if(!c) throw new Error('空の応答'); try{return JSON.parse(c)}catch(e){ var m=c.match(/```(?:json)?\s*([\s\S]*?)\s*```/); if(m)return JSON.parse(m[1]); throw new Error('JSON解析失敗') } })
+}
+
+// カスタムプロンプト版
+function callAIWithPrompt(systemPrompt, userContent) {
+  var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
+  if (!apiKey) return Promise.reject(new Error('APIキーを設定してください'))
+  var p
+  if (isGemini(model)) {
+    p = fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ system_instruction:{parts:[{text:systemPrompt}]}, contents:[{parts:[{text:userContent}]}], generationConfig:{response_mime_type:'application/json',temperature:0.3} })
+    }).then(function(r) { if(!r.ok) { if(r.status===429) throw new Error('レート制限。OpenAIに切り替えてください'); return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'Gemini error '+r.status)}) } return r.json() })
+     .then(function(d) { return d.candidates[0].content.parts[0].text })
+  } else {
+    p = fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      body:JSON.stringify({ model:model, messages:[{role:'system',content:systemPrompt},{role:'user',content:userContent}], response_format:{type:'json_object'}, max_completion_tokens:8000 })
     }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'OpenAI error')}); return r.json() })
      .then(function(d) { return d.choices[0].message.content })
   }
@@ -947,22 +991,146 @@ function renderPreview(spec) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// Generate: サブタブ切替
+// ══════════════════════════════════════════════════════════════
+var genMode = 'prompt' // 'prompt' | 'code' | 'history'
+
+document.querySelectorAll('.sub-tab').forEach(function(t) {
+  t.addEventListener('click', function() {
+    genMode = t.getAttribute('data-gen')
+    document.querySelectorAll('.sub-tab').forEach(function(s) { s.classList.toggle('active', s.getAttribute('data-gen') === genMode) })
+    hide($('prompt')); hide($('codeInput')); hide($('genHistoryArea')); hide($('genPreview'))
+    if (genMode === 'prompt') show($('prompt'))
+    if (genMode === 'code') show($('codeInput'))
+    if (genMode === 'history') { show($('genHistoryArea')); parent.postMessage({ pluginMessage: { type: 'load-gen-history' } }, '*') }
+    currentSpec = null; updateBottomBar()
+  })
+})
+
+// ══════════════════════════════════════════════════════════════
+// Generate: 履歴表示
+// ══════════════════════════════════════════════════════════════
+function renderGenHistory(history) {
+  var el = $('genHistoryArea')
+  if (!history.length) { el.innerHTML = '<div class="empty-state" style="padding:16px">生成履歴なし</div>'; return }
+  var h = ''
+  for (var i = 0; i < history.length; i++) {
+    var e = history[i]
+    var d = new Date(e.timestamp)
+    var dateStr = (d.getMonth()+1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + ('0'+d.getMinutes()).slice(-2)
+    var modeLabel = e.mode === 'code' ? 'Code' : '自然言語'
+    h += '<div class="hist-item" data-gen-id="' + e.id + '">'
+    h += '<div class="hist-head">'
+    h += '<span style="font-size:12px;color:var(--accent);font-weight:600;font-family:var(--mono)">' + modeLabel + '</span>'
+    h += '<span class="hist-name">' + (e.name || 'Generated') + '</span>'
+    h += '<span class="hist-date">' + dateStr + '</span>'
+    h += '<button class="hist-del" data-gen-del="' + e.id + '" title="削除">×</button>'
+    h += '</div>'
+    h += '<div class="hist-summary">' + (e.input || '') + '</div>'
+    h += '</div>'
+  }
+  el.innerHTML = h
+}
+
+$('genHistoryArea').addEventListener('click', function(ev) {
+  var delBtn = ev.target.closest('[data-gen-del]')
+  if (delBtn) {
+    ev.stopPropagation()
+    parent.postMessage({ pluginMessage: { type: 'delete-gen-history', id: delBtn.getAttribute('data-gen-del') } }, '*')
+  }
+})
+
+// ══════════════════════════════════════════════════════════════
+// Generate: Code → Figma 変換プロンプト
+// ══════════════════════════════════════════════════════════════
+var CODE_TO_FIGMA_PROMPT = [
+'あなたはReact/HTML/TailwindのコードをFigmaノード構造に変換するコンバーターです。',
+'入力されたコードを解析し、Figma上で再現可能なJSON構造を出力してください。',
+'',
+'出力形式（JSONのみ）:',
+'{"name":"コンポーネント名","frames":[{"name":"画面名","type":"FRAME","width":390,"fill":"#FFFFFF","layoutMode":"VERTICAL","padding":24,"itemSpacing":16,"counterAxisSizingMode":"FIXED","children":[...]}]}',
+'',
+'変換ルール:',
+'- className の Tailwind を Figma プロパティに変換:',
+'  p-4→padding:16  px-6→paddingX:24  py-3→paddingY:12',
+'  gap-4→itemSpacing:16  rounded-xl→cornerRadius:12  rounded-lg→cornerRadius:8',
+'  bg-white→fill:#FFFFFF  bg-blue-600→fill:#2563EB  bg-gray-100→fill:#F1F5F9',
+'  text-white→color:#FFFFFF  text-gray-900→color:#0F172A  text-gray-500→color:#64748B',
+'  text-2xl→fontSize:24  text-xl→fontSize:20  text-lg→fontSize:18  text-sm→fontSize:14  text-xs→fontSize:12',
+'  font-bold→fontWeight:Bold  font-semibold→fontWeight:SemiBold  font-medium→fontWeight:Medium',
+'  flex→layoutMode:HORIZONTAL  flex-col→layoutMode:VERTICAL',
+'  w-full→fillWidth:true  space-y-4→itemSpacing:16',
+'  border→stroke:#E2E8F0,strokeWidth:1  shadow→（無視）',
+'- <div>→FRAME  <span>/<p>/<h1-h6>→TEXT  <button>→FRAME(ボタン)  <input>→FRAME(入力欄)',
+'- <img>/<svg>/<Icon>→ELLIPSE(プレースホルダー)',
+'- 全コンテナにlayoutMode必須。fill未指定のコンテナは透明（fillキー省略）',
+'- テキストは日本語に翻訳しない。元のまま維持',
+'- fill=#000000 禁止。ルートは fill:#FFFFFF',
+].join('\n')
+
+// ══════════════════════════════════════════════════════════════
 // Generate: アクション
 // ══════════════════════════════════════════════════════════════
 function doGenerate() {
-  var prompt = $('prompt').value.trim(); if (!prompt) return
-  $('btnRun').disabled = true; genLoading = true; $('statusGenText').textContent = 'AIが構造を生成中...'; updateBottomBar()
-  callAI(prompt).then(function(spec) {
-    currentSpec = spec; renderPreview(spec); hide($('prompt')); show($('genPreview')); genLoading = false; updateBottomBar()
-  }).catch(function(e) { genLoading = false; updateBottomBar(); $('btnRun').disabled = false; addLog('genLog','error',e.message) })
+  var input, promptText
+  if (genMode === 'code') {
+    input = $('codeInput').value.trim()
+    if (!input) return
+    promptText = CODE_TO_FIGMA_PROMPT
+  } else {
+    input = $('prompt').value.trim()
+    if (!input) return
+    promptText = null // uses default SYSTEM_PROMPT
+  }
+
+  $('btnRun').disabled = true; genLoading = true
+  $('statusGenText').textContent = genMode === 'code' ? 'コードをFigma構造に変換中...' : 'AIが構造を生成中...'
+  updateBottomBar()
+
+  var p
+  if (promptText) {
+    // Code mode: use CODE_TO_FIGMA_PROMPT
+    p = callAIWithPrompt(promptText, input)
+  } else {
+    p = callAI(input)
+  }
+
+  p.then(function(spec) {
+    currentSpec = spec
+    renderPreview(spec)
+    hide($('prompt')); hide($('codeInput')); show($('genPreview'))
+    genLoading = false; updateBottomBar()
+  }).catch(function(e) {
+    genLoading = false; updateBottomBar(); $('btnRun').disabled = false
+    addLog('genLog', 'error', e.message)
+  })
 }
+
 function doConfirm() {
   if (!currentSpec) return
   genLoading = true; $('statusGenText').textContent = 'Figmaに反映中...'; updateBottomBar()
+
+  // 履歴に保存
+  var inputText = genMode === 'code' ? $('codeInput').value.trim().slice(0, 200) : $('prompt').value.trim().slice(0, 200)
+  parent.postMessage({ pluginMessage: { type: 'save-gen-history', entry: {
+    id: String(Date.now()),
+    timestamp: Date.now(),
+    mode: genMode,
+    input: inputText,
+    name: currentSpec.name || 'Generated',
+  }}}, '*')
+
   parent.postMessage({ pluginMessage: { type: 'generate', spec: currentSpec } }, '*')
-  currentSpec = null; show($('prompt')); hide($('genPreview')); updateBottomBar()
+  currentSpec = null
+  if (genMode === 'code') { show($('codeInput')) } else { show($('prompt')) }
+  hide($('genPreview')); updateBottomBar()
 }
-function doCancel() { currentSpec = null; show($('prompt')); hide($('genPreview')); updateBottomBar() }
+
+function doCancel() {
+  currentSpec = null; hide($('genPreview'))
+  if (genMode === 'code') { show($('codeInput')) } else { show($('prompt')) }
+  updateBottomBar()
+}
 
 // ══════════════════════════════════════════════════════════════
 // Tokens: Import
