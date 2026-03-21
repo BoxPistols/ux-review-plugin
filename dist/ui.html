@@ -379,19 +379,28 @@ html, body {
 }
 .img-drop:hover, .img-drop.dragover { border-color: var(--accent); }
 
-/* ── Resize grip (top-left) ── */
-.resize-tl {
-  position: fixed; top: 0; left: 0; width: 14px; height: 14px;
-  cursor: nwse-resize; z-index: 200; opacity: 0;
+/* ── Resize grips ── */
+.resize-edge {
+  position: fixed; top: 0; width: 6px; height: 100%; z-index: 200;
+  cursor: ew-resize; opacity: 0;
 }
-.resize-tl:hover { opacity: 0.3; }
+.resize-edge:hover { opacity: 1; background: var(--accent); }
+.resize-edge.left { left: 0; }
+.resize-edge.right { right: 0; }
+.resize-bottom {
+  position: fixed; bottom: 0; left: 0; width: 100%; height: 6px; z-index: 200;
+  cursor: ns-resize; opacity: 0;
+}
+.resize-bottom:hover { opacity: 1; background: var(--accent); }
 
 .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
-<div class="resize-tl" id="resizeTL"></div>
+<div class="resize-edge left" id="resizeL"></div>
+<div class="resize-edge right" id="resizeR"></div>
+<div class="resize-bottom" id="resizeB"></div>
 <div class="layout">
   <!-- Header -->
   <div class="header">
@@ -780,7 +789,8 @@ var SYSTEM_PROMPT = [
 '- ボタンは cornerRadius:12, paddingY:12（高さは自動。height指定しない）',
 '- ボタンに fillWidth:true を使わない（ボタンは内容幅に合わせる。フォーム内の送信ボタンのみ例外）',
 '- カード・入力フィールドは fillWidth:true',
-'- コンポーネントショーケースではボタンをHORIZONTALで横並び、またはグリッド配置にする',
+'- コンポーネント生成時は components のみ出力。frames（ショーケース/サンプル画面）は生成しない',
+'- 画面UIの生成を明示的に依頼された場合のみ frames を出力する',
 '',
 '━━━ 構造テンプレート ━━━',
 '',
@@ -1711,12 +1721,21 @@ $('btnDlReview').addEventListener('click', function() {
   URL.revokeObjectURL(url)
 })
 
-// 左上リサイズ
+// 端ドラッグリサイズ
 ;(function() {
-  var g = $('resizeTL'), drag = false, sx, sy, sw, sh
-  g.addEventListener('mousedown', function(e) { drag = true; sx = e.clientX; sy = e.clientY; sw = window.innerWidth; sh = window.innerHeight; e.preventDefault() })
-  window.addEventListener('mousemove', function(e) { if (!drag) return; postResize(Math.max(380, sw - (e.clientX - sx)), Math.max(400, sh - (e.clientY - sy))) })
-  window.addEventListener('mouseup', function() { drag = false })
+  var mode = null, sx, sy, sw, sh
+  function startDrag(m) { return function(e) { mode = m; sx = e.clientX; sy = e.clientY; sw = window.innerWidth; sh = window.innerHeight; e.preventDefault() } }
+  $('resizeL').addEventListener('mousedown', startDrag('l'))
+  $('resizeR').addEventListener('mousedown', startDrag('r'))
+  $('resizeB').addEventListener('mousedown', startDrag('b'))
+  window.addEventListener('mousemove', function(e) {
+    if (!mode) return
+    var dx = e.clientX - sx, dy = e.clientY - sy
+    if (mode === 'r') postResize(Math.max(380, sw + dx), sh)
+    if (mode === 'l') postResize(Math.max(380, sw - dx), sh)
+    if (mode === 'b') postResize(sw, Math.max(400, sh + dy))
+  })
+  window.addEventListener('mouseup', function() { mode = null })
 })()
 
 // 初期表示
