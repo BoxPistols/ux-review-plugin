@@ -719,20 +719,35 @@ var REVIEW_PROMPT = [
 '  ]',
 '}',
 '',
-'レビュー観点（優先度順）:',
-'1. 画面構造・コンポーネント選定の妥当性',
-'2. 前後画面との関係性・フロー整合性',
-'3. タイポグラフィ階層（Headline 24-32, Title 16-20, Body 14, Label 12）',
-'4. スペーシング（4dpグリッド、padding 16-24, gap 8-16）',
-'5. カラー（本文#0F172A, サブ#475569, メタ#94A3B8, ボタン#2563EB）',
-'6. ボタン・入力フィールドの仕様（高さ44+, radius 12, padding適正）',
+'レビュー観点（この優先度順で指摘すること）:',
+'',
+'★★★ 最優先 — ユーザー目的達成・情報設計',
+'- この画面でユーザーが達成したいタスクは何か、それが阻害されていないか',
+'- 情報の優先度と視覚的な階層が一致しているか',
+'- CTAの位置・目立ち方は適切か、ユーザーが迷わず次の行動に移れるか',
+'- 前後の画面との文脈のつながり、ナビゲーションの明確さ',
+'',
+'★★ 高優先 — 画面構造・コンポーネント選定',
+'- コンポーネントの選択が適切か（カード/リスト/テーブルの使い分け）',
+'- エラー状態・空状態・ローディング状態の設計有無',
+'- 冗長な要素や重複する機能がないか',
+'',
+'★ 中優先 — ビジュアル品質',
+'- タイポグラフィ階層の明確さ',
+'- スペーシングの一貫性',
+'- カラーの適切さ',
+'',
+'▽ 低優先（最低限に留める）',
+'- ピクセル精度の細部',
+'- アクセシビリティ（重大な違反のみ指摘）',
 '',
 'ルール:',
-'- details は最大5件。インパクトの大きい指摘のみ',
+'- details は最大6件。px指摘に終始せず、上位の観点を必ず含める',
 '- severity: critical=即対応, warning=改善推奨, good=良い点',
 '- good を必ず1件含める',
 '- target はフレーム内のノード名と完全一致',
 '- message は断定形。「〜かもしれない」禁止',
+'- category は具体的に: 「ユーザー導線の阻害」「情報階層の不一致」「CTAの視認性」等',
 ].join('\n')
 
 function doReviewImprove() {
@@ -806,6 +821,18 @@ function textToParagraphs(text) {
   return paragraphs.join('')
 }
 
+function renderDetailItem(d) {
+  var sevColor = d.severity === 'critical' ? 'var(--red)' : d.severity === 'good' ? 'var(--green)' : 'var(--yellow)'
+  var h = '<div class="mod-item" data-target="' + (d.target || '') + '">'
+  h += '<div class="mod-head">'
+  if (d.target) h += '<span class="mod-target">' + d.target + '</span>'
+  h += '<span class="mod-action">' + (d.category || '') + '</span>'
+  h += '</div>'
+  h += '<div style="margin-top:4px">' + (d.message || '') + '</div>'
+  h += '</div>'
+  return h
+}
+
 function renderReviewPreview(r) {
   var scoreClass = r.score >= 75 ? 'high' : r.score >= 50 ? 'mid' : 'low'
   var h = '<div class="review-score ' + scoreClass + '">' + r.score + '<span style="font-size:14px;color:var(--text-dim)"> / 100</span></div>'
@@ -813,23 +840,30 @@ function renderReviewPreview(r) {
   h += '<div class="review-block"><div class="review-label asis">現状分析</div><div class="review-text">' + textToParagraphs(r.asIs) + '</div></div>'
   h += '<div class="review-block"><div class="review-label tobe">改善提案</div><div class="review-text">' + textToParagraphs(r.toBe) + '</div></div>'
 
-  // 詳細指摘
+  // セベリティ別にグルーピング
   if (r.details && r.details.length) {
-    h += '<div class="section-title" style="margin-top:4px">指摘 (' + r.details.length + '件)</div>'
-    h += '<div class="mod-list">'
+    var groups = { critical: [], warning: [], good: [] }
     for (var i = 0; i < r.details.length; i++) {
-      var d = r.details[i]
-      var sevColor = d.severity === 'critical' ? 'var(--red)' : d.severity === 'good' ? 'var(--green)' : 'var(--yellow)'
-      h += '<div class="mod-item" data-target="' + (d.target || '') + '">'
-      h += '<div class="mod-head">'
-      h += '<span style="color:' + sevColor + ';font-weight:600;font-size:12px">' + (d.severity || '').toUpperCase() + '</span>'
-      h += '<span class="mod-target">' + (d.target || '') + '</span>'
-      h += '<span class="mod-action">' + (d.category || '') + '</span>'
-      h += '</div>'
-      h += '<div style="margin-top:4px">' + (d.message || '') + '</div>'
+      var sev = r.details[i].severity || 'warning'
+      if (!groups[sev]) groups[sev] = []
+      groups[sev].push(r.details[i])
+    }
+
+    var sevOrder = [
+      { key: 'critical', label: 'CRITICAL', color: 'var(--red)' },
+      { key: 'warning', label: 'WARNING', color: 'var(--yellow)' },
+      { key: 'good', label: 'GOOD', color: 'var(--green)' },
+    ]
+
+    for (var s = 0; s < sevOrder.length; s++) {
+      var items = groups[sevOrder[s].key]
+      if (!items || !items.length) continue
+      h += '<div style="margin-top:8px"><span style="font-size:12px;font-weight:700;color:' + sevOrder[s].color + '">' + sevOrder[s].label + '</span>'
+      h += '<span style="font-size:12px;color:var(--text-dim);margin-left:6px">' + items.length + '件</span></div>'
+      h += '<div class="mod-list">'
+      for (var j = 0; j < items.length; j++) h += renderDetailItem(items[j])
       h += '</div>'
     }
-    h += '</div>'
   }
 
   $('reviewPreview').innerHTML = h

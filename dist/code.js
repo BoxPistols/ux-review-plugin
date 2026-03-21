@@ -732,23 +732,36 @@ figma.ui.onmessage = function(msg) {
     });
   }
 
-  // ── Review: ノードハイライト（クリックで対象を選択＋ズーム）──
+  // ── Review: ノードハイライト ──
   if (msg.type === "highlight-node") {
+    var nodeName = msg.nodeName;
+    if (!nodeName) return;
+
+    var target = null;
     var sel = figma.currentPage.selection;
-    var root = sel.length ? sel[0] : null;
-    if (!root) { figma.notify("フレームを先に選択してください"); return; }
-    // 選択中フレーム内を検索
-    var target = findByPath(root, msg.nodeName);
-    // 見つからない場合、ページ全体から検索
-    if (!target) {
-      target = figma.currentPage.findOne(function(n) { return n.name === msg.nodeName; });
+
+    // 1) 選択中ノード自身が対象か
+    if (sel.length && sel[0].name === nodeName) { target = sel[0]; }
+    // 2) 選択中ノードの子孫を検索
+    if (!target && sel.length) {
+      var root = sel[0];
+      // 親フレームまで遡る（子ノードが選択中の場合）
+      while (root.parent && root.parent.type !== "PAGE") root = root.parent;
+      if (typeof root.findOne === "function") {
+        target = root.findOne(function(n) { return n.name === nodeName; });
+      }
     }
+    // 3) ページ全体から検索
+    if (!target) {
+      target = figma.currentPage.findOne(function(n) { return n.name === nodeName; });
+    }
+
     if (target) {
       figma.currentPage.selection = [target];
       figma.viewport.scrollAndZoomIntoView([target]);
-      figma.notify(target.name + " (" + target.type + ")");
+      figma.notify(target.name + " (" + Math.round(target.width) + "x" + Math.round(target.height) + ")");
     } else {
-      figma.notify("\"" + msg.nodeName + "\" が見つかりません");
+      figma.notify(nodeName + " が見つかりません");
     }
   }
 
