@@ -379,11 +379,19 @@ html, body {
 }
 .img-drop:hover, .img-drop.dragover { border-color: var(--accent); }
 
+/* ── Resize grip (top-left) ── */
+.resize-tl {
+  position: fixed; top: 0; left: 0; width: 14px; height: 14px;
+  cursor: nwse-resize; z-index: 200; opacity: 0;
+}
+.resize-tl:hover { opacity: 0.3; }
+
 .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
+<div class="resize-tl" id="resizeTL"></div>
 <div class="layout">
   <!-- Header -->
   <div class="header">
@@ -1702,6 +1710,14 @@ $('btnDlReview').addEventListener('click', function() {
   a.click()
   URL.revokeObjectURL(url)
 })
+
+// 左上リサイズ
+;(function() {
+  var g = $('resizeTL'), drag = false, sx, sy, sw, sh
+  g.addEventListener('mousedown', function(e) { drag = true; sx = e.clientX; sy = e.clientY; sw = window.innerWidth; sh = window.innerHeight; e.preventDefault() })
+  window.addEventListener('mousemove', function(e) { if (!drag) return; postResize(Math.max(380, sw - (e.clientX - sx)), Math.max(400, sh - (e.clientY - sy))) })
+  window.addEventListener('mouseup', function() { drag = false })
+})()
 
 // 初期表示
 updateBottomBar()
