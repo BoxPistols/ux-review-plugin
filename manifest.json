@@ -1,6 +1,6 @@
 {
   "name": "UX Review AI",
-  "id": "ux-review-ai",
+  "id": "ux-review-ai-unified",
   "api": "1.0.0",
   "main": "dist/code.js",
   "ui": "dist/ui.html",
@@ -8,10 +8,11 @@
   "networkAccess": {
     "allowedDomains": [
       "https://api.openai.com",
+      "https://generativelanguage.googleapis.com",
       "https://*.workers.dev",
       "https://fonts.googleapis.com",
       "https://fonts.gstatic.com"
     ],
-    "reasoning": "OpenAI API / Cloudflare Workers proxy / Google Fonts"
+    "reasoning": "OpenAI API / Gemini API / Proxy / Google Fonts"
   }
 }

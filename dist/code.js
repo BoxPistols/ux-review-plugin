@@ -1,173 +1,865 @@
 "use strict";
 
-// src/code.ts
-figma.showUI(__html__, { width: 420, height: 680, title: "UX Review AI", themeColors: true });
-function buildFileContext() {
-  const fileName = figma.root.name;
-  const pages = figma.root.children.map((p) => p.name);
-  const allText = [fileName, ...pages].join(" ").toLowerCase();
-  let projectType = "";
-  if (/drone|uav|flight|点検|inspection/.test(allText))
-    projectType = "\u30C9\u30ED\u30FC\u30F3\u70B9\u691C\u30FBUAV\u7BA1\u7406\u30B7\u30B9\u30C6\u30E0";
-  else if (/crm|顧客|customer|sales/.test(allText))
-    projectType = "CRM\u30FB\u55B6\u696D\u7BA1\u7406\u30B7\u30B9\u30C6\u30E0";
-  else if (/erp|inventory|在庫|purchase|発注/.test(allText))
-    projectType = "ERP\u30FB\u5728\u5EAB\u7BA1\u7406\u30B7\u30B9\u30C6\u30E0";
-  else if (/dashboard|monitor|分析|analytics/.test(allText))
-    projectType = "\u7BA1\u7406\u30C0\u30C3\u30B7\u30E5\u30DC\u30FC\u30C9\u30FB\u5206\u6790\u30B7\u30B9\u30C6\u30E0";
-  else if (/booking|reservation|予約|schedule/.test(allText))
-    projectType = "\u4E88\u7D04\u30FB\u30B9\u30B1\u30B8\u30E5\u30FC\u30EB\u7BA1\u7406\u30B7\u30B9\u30C6\u30E0";
-  else if (/map|gis|geo|地図/.test(allText))
-    projectType = "\u5730\u56F3\u30FBGIS\u30B7\u30B9\u30C6\u30E0";
-  else if (/approval|承認|workflow|フロー/.test(allText))
-    projectType = "\u627F\u8A8D\u30EF\u30FC\u30AF\u30D5\u30ED\u30FC\u30B7\u30B9\u30C6\u30E0";
-  else
-    projectType = "B2B\u696D\u52D9\u30B7\u30B9\u30C6\u30E0";
-  const hasCRUD = pages.some((p) => /一覧|詳細|登録|編集|create|list|detail|edit/.test(p.toLowerCase()));
-  const hasOnboarding = pages.some((p) => /login|ログイン|onboard|signup/.test(p.toLowerCase()));
-  const hasSettings = pages.some((p) => /setting|設定|config/.test(p.toLowerCase()));
-  const allFrameNames = [];
-  figma.root.children.forEach((page) => {
-    page.children.forEach((n) => allFrameNames.push(n.name));
-  });
-  const frameText = allFrameNames.join(" ").toLowerCase();
-  let estimatedStack = "";
-  if (/mui|material/.test(frameText))
-    estimatedStack = "Material UI\u7CFB";
-  else if (/ant[\s-]design|antd/.test(frameText))
-    estimatedStack = "Ant Design\u7CFB";
-  else if (/chakra/.test(frameText))
-    estimatedStack = "Chakra UI\u7CFB";
-  else if (/1440|1920/.test(frameText))
-    estimatedStack = "\u30C7\u30B9\u30AF\u30C8\u30C3\u30D7Web\uFF081440px\u57FA\u6E96\uFF09";
-  else if (/375|390|430/.test(frameText))
-    estimatedStack = "\u30E2\u30D0\u30A4\u30EB\uFF08iPhone\u7CFB\uFF09";
-  else if (/768|1024/.test(frameText))
-    estimatedStack = "\u30BF\u30D6\u30EC\u30C3\u30C8\u7CFB";
-  return {
-    fileName,
-    pages,
-    projectType,
-    estimatedStack,
-    hasCRUD,
-    hasOnboarding,
-    hasSettings,
-    totalFrames: allFrameNames.length
-  };
+figma.showUI(__html__, { width: 480, height: 680, title: "UX Review AI", themeColors: true });
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 共通ユーティリティ
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var FONTS = [
+  { family: "Inter", style: "Regular" },
+  { family: "Inter", style: "Medium" },
+  { family: "Inter", style: "Semi Bold" },
+  { family: "Inter", style: "Bold" },
+];
+var fontsReady = false;
+function ensureFonts() {
+  if (fontsReady) return Promise.resolve();
+  return Promise.all(FONTS.map(function(f) { return figma.loadFontAsync(f); })).then(function() { fontsReady = true; });
 }
-function extractNode(node, depth = 0) {
-  var _a;
-  const s = {
-    id: node.id,
-    name: node.name,
-    type: node.type,
-    width: "width" in node ? Math.round(node.width) : 0,
-    height: "height" in node ? Math.round(node.height) : 0,
-    children: [],
-    texts: [],
-    interactions: []
-  };
-  if (node.type === "INSTANCE")
-    s.componentName = (_a = node.mainComponent) == null ? void 0 : _a.name;
-  if (node.type === "TEXT") {
-    const c = node.characters;
-    if (c)
-      s.texts.push(c.slice(0, 150));
+
+function hex2rgb(hex) {
+  var h = (hex || "#888888").replace("#", "");
+  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  return { r: parseInt(h.substring(0, 2), 16) / 255, g: parseInt(h.substring(2, 4), 16) / 255, b: parseInt(h.substring(4, 6), 16) / 255 };
+}
+function solid(hex) { return hex ? [{ type: "SOLID", color: hex2rgb(hex) }] : []; }
+function d(val, def) { return (val != null) ? val : def; }
+var WMAP = { Regular: "Regular", Medium: "Medium", SemiBold: "Semi Bold", Bold: "Bold" };
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Undo スタック
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+var undoStack = [];
+// プラグインが作成したCollectionのIDを追跡
+var pluginCreatedCollections = [];
+
+function undoEntry(entry) {
+  var i;
+  for (i = 0; i < entry.nodes.length; i++) { try { var n = figma.getNodeById(entry.nodes[i]); if (n) n.remove(); } catch(e){} }
+  for (i = 0; i < entry.variables.length; i++) { try { var v = figma.variables.getVariableById(entry.variables[i]); if (v) v.remove(); } catch(e){} }
+  for (i = 0; i < entry.collections.length; i++) {
+    try { var c = figma.variables.getVariableCollectionById(entry.collections[i]); if (c) c.remove(); } catch(e){}
+    // 追跡リストからも除去
+    var idx = pluginCreatedCollections.indexOf(entry.collections[i]);
+    if (idx !== -1) pluginCreatedCollections.splice(idx, 1);
   }
-  if ("reactions" in node) {
-    ;
-    node.reactions.forEach((r) => {
-      var _a2, _b, _c, _d;
-      s.interactions.push(`${(_b = (_a2 = r.trigger) == null ? void 0 : _a2.type) != null ? _b : "?"} \u2192 ${(_d = (_c = r.action) == null ? void 0 : _c.type) != null ? _d : "?"}`);
-    });
+  // リネームの復元
+  if (entry.renames) {
+    for (i = 0; i < entry.renames.length; i++) {
+      try { var rn = figma.getNodeById(entry.renames[i].id); if (rn) rn.name = entry.renames[i].oldName; } catch(e){}
+    }
   }
-  if (depth < 5 && "children" in node) {
-    ;
-    node.children.slice(0, 25).forEach((child) => {
-      const c = extractNode(child, depth + 1);
-      s.texts.push(...c.texts);
-      s.children.push(c);
-    });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [Review] ノード抽出・選択監視
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function extractNode(node, depth) {
+  if (depth > 4) return null;
+  var s = { id: node.id, name: node.name, type: node.type, width: 0, height: 0, children: [], texts: [] };
+  if ("width" in node) { s.width = Math.round(node.width); s.height = Math.round(node.height); }
+  if (node.type === "INSTANCE" && node.mainComponent) s.componentName = node.mainComponent.name;
+  if (node.type === "TEXT" && node.characters) s.texts.push(node.characters.slice(0, 150));
+  if ("children" in node) {
+    var kids = node.children.slice(0, 25);
+    for (var i = 0; i < kids.length; i++) {
+      var c = extractNode(kids[i], depth + 1);
+      if (c) { s.texts = s.texts.concat(c.texts); s.children.push(c); }
+    }
   }
   return s;
 }
-function getPageFrames() {
-  return figma.root.children.map((page) => ({
-    pageName: page.name,
-    frames: page.children.filter((n) => n.type === "FRAME" || n.type === "COMPONENT").map((n) => ({ name: n.name, id: n.id })).slice(0, 40)
-  }));
+
+function buildFileContext() {
+  var fileName = figma.root.name;
+  var pages = figma.root.children.map(function(p) { return p.name; });
+  return { fileName: fileName, pages: pages, totalPages: pages.length };
 }
+
 function notifySelection() {
-  const sel = figma.currentPage.selection;
-  const fileContext = buildFileContext();
+  var sel = figma.currentPage.selection;
+  var fc = buildFileContext();
   if (sel.length === 0) {
-    figma.ui.postMessage({ type: "selection-cleared", fileContext });
+    figma.ui.postMessage({ type: "selection-cleared", fileContext: fc });
     return;
   }
-  const nodes = sel.map((n) => extractNode(n));
-  figma.ui.postMessage({
-    type: "selection-changed",
-    nodes,
-    isMulti: nodes.length > 1,
-    pageFrames: getPageFrames(),
-    currentPage: figma.currentPage.name,
-    fileContext
+  var nodes = [];
+  for (var i = 0; i < sel.length; i++) { var n = extractNode(sel[i], 0); if (n) nodes.push(n); }
+  figma.ui.postMessage({ type: "selection-changed", nodes: nodes, isMulti: nodes.length > 1, currentPage: figma.currentPage.name, fileContext: fc });
+}
+
+figma.on("selectionchange", notifySelection);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [Generate] Variables 生成
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function createVars(collections) {
+  var ids = { collections: [], variables: [] };
+  for (var i = 0; i < collections.length; i++) {
+    var col = collections[i];
+    var c = figma.variables.createVariableCollection(col.collection);
+    ids.collections.push(c.id);
+    pluginCreatedCollections.push(c.id);
+    var mode = c.modes[0].modeId || c.modes[0].id;
+    for (var j = 0; j < col.variables.length; j++) {
+      var vd = col.variables[j];
+      var typ = vd.type === "COLOR" ? "COLOR" : "FLOAT";
+      var fv = figma.variables.createVariable(vd.name, c.id, typ);
+      ids.variables.push(fv.id);
+      fv.setValueForMode(mode, typ === "COLOR" ? hex2rgb(vd.value) : (Number(vd.value) || 0));
+    }
+  }
+  return ids;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [Generate] Component Variants 生成
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function createComps(components) {
+  return ensureFonts().then(function() {
+    var ids = { nodes: [] };
+    var center = figma.viewport.center;
+    var ox = 0; var allSets = [];
+    for (var i = 0; i < components.length; i++) {
+      var comp = components[i]; var nodes = [];
+      for (var j = 0; j < comp.variants.length; j++) {
+        var vr = comp.variants[j];
+        var c = figma.createComponent();
+        c.layoutMode = "HORIZONTAL"; c.primaryAxisAlignItems = "CENTER"; c.counterAxisAlignItems = "CENTER";
+        c.primaryAxisSizingMode = "AUTO"; c.counterAxisSizingMode = "AUTO";
+        c.paddingLeft = c.paddingRight = d(vr.paddingX, 16);
+        c.paddingTop = c.paddingBottom = d(vr.paddingY, 10);
+        c.cornerRadius = d(vr.cornerRadius, 8); c.itemSpacing = d(vr.gap, 8);
+        var fill = vr.fill;
+        c.fills = (fill && fill !== "none" && fill !== "transparent") ? solid(fill) : [];
+        if (vr.stroke) { c.strokes = solid(vr.stroke); c.strokeWeight = d(vr.strokeWidth, 1); }
+        if (vr.opacity != null) c.opacity = vr.opacity;
+        var t = figma.createText();
+        t.fontName = { family: "Inter", style: WMAP[vr.fontWeight] || "Medium" };
+        t.characters = vr.label || "\u30DC\u30BF\u30F3";
+        t.fontSize = d(vr.fontSize, 14);
+        if (vr.textColor) t.fills = solid(vr.textColor);
+        c.appendChild(t);
+        c.name = Object.keys(vr.props).map(function(k) { return k + "=" + vr.props[k]; }).join(", ");
+        nodes.push(c);
+      }
+      if (nodes.length) {
+        var cs = figma.combineAsVariants(nodes, figma.currentPage);
+        cs.name = comp.name;
+        cs.layoutMode = "VERTICAL"; cs.counterAxisSizingMode = "AUTO"; cs.primaryAxisSizingMode = "AUTO";
+        cs.itemSpacing = 16; cs.paddingTop = cs.paddingBottom = 24; cs.paddingLeft = cs.paddingRight = 24;
+        cs.x = Math.round(center.x + ox); cs.y = Math.round(center.y);
+        ox += cs.width + 80; allSets.push(cs); ids.nodes.push(cs.id);
+      }
+    }
+    if (allSets.length) { figma.currentPage.selection = allSets; figma.viewport.scrollAndZoomIntoView(allSets); }
+    return ids;
   });
 }
-figma.on("selectionchange", notifySelection);
-notifySelection();
-figma.ui.onmessage = async (msg) => {
-  var _a;
-  if (msg.type === "load-settings") {
-    const [apiKey, model, domain, proxyUrl, projectKnowledge, history] = await Promise.all([
-      figma.clientStorage.getAsync("oai_key"),
-      figma.clientStorage.getAsync("oai_model"),
-      figma.clientStorage.getAsync("domain"),
-      figma.clientStorage.getAsync("proxy_url"),
-      figma.clientStorage.getAsync("project_knowledge"),
-      figma.clientStorage.getAsync("review_history")
-    ]);
-    figma.ui.postMessage({
-      type: "settings-loaded",
-      apiKey: apiKey != null ? apiKey : "",
-      model: ["gpt-5.4-nano", "gpt-5.4-mini"].includes(model) ? model : "gpt-5.4-nano",
-      domain: domain != null ? domain : "",
-      proxyUrl: proxyUrl != null ? proxyUrl : "",
-      projectKnowledge: projectKnowledge != null ? projectKnowledge : "",
-      history: history != null ? history : [],
-      fileContext: buildFileContext()
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [Generate] Auto Layout フレーム生成
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildAutoNode(spec, parent) {
+  return ensureFonts().then(function() {
+    var node; var type = spec.type || "FRAME";
+    if (type === "TEXT") {
+      node = figma.createText();
+      node.fontName = { family: "Inter", style: WMAP[spec.fontWeight] || "Regular" };
+      node.characters = spec.text || ""; node.fontSize = d(spec.fontSize, 14);
+      if (spec.color) node.fills = solid(spec.color);
+    } else if (type === "RECT") {
+      node = figma.createRectangle();
+      node.resize(Math.max(d(spec.width, 100), 1), Math.max(d(spec.height, 1), 1));
+      node.fills = spec.fill ? solid(spec.fill) : [];
+      if (spec.cornerRadius != null) node.cornerRadius = spec.cornerRadius;
+      if (spec.stroke) { node.strokes = solid(spec.stroke); node.strokeWeight = d(spec.strokeWidth, 1); }
+    } else if (type === "ELLIPSE") {
+      node = figma.createEllipse();
+      node.resize(Math.max(d(spec.width, 40), 1), Math.max(d(spec.height, 40), 1));
+      node.fills = spec.fill ? solid(spec.fill) : [];
+    } else {
+      node = figma.createFrame();
+      node.resize(Math.max(d(spec.width, 100), 1), Math.max(d(spec.height, 100), 1));
+      var bg = spec.fill || spec.background;
+      if (bg && bg !== "transparent" && bg !== "none") {
+        node.fills = solid(bg);
+      } else {
+        // fill未指定のコンテナFRAMEは透明（Figmaデフォルトの白塗りを除去）
+        node.fills = [];
+      }
+      if (spec.cornerRadius != null) node.cornerRadius = spec.cornerRadius;
+      if (spec.stroke) { node.strokes = solid(spec.stroke); node.strokeWeight = d(spec.strokeWidth, 1); }
+      if (spec.layoutMode) {
+        node.layoutMode = spec.layoutMode;
+        node.itemSpacing = d(spec.itemSpacing, d(spec.gap, 0));
+        var p = spec.padding;
+        if (typeof p === "number") { node.paddingTop = node.paddingBottom = node.paddingLeft = node.paddingRight = p; }
+        if (spec.paddingX != null) { node.paddingLeft = node.paddingRight = spec.paddingX; }
+        if (spec.paddingY != null) { node.paddingTop = node.paddingBottom = spec.paddingY; }
+        node.primaryAxisSizingMode = spec.primaryAxisSizingMode || "AUTO";
+        node.counterAxisSizingMode = spec.counterAxisSizingMode || "FIXED";
+        if (spec.primaryAxisAlignItems) node.primaryAxisAlignItems = spec.primaryAxisAlignItems;
+        if (spec.counterAxisAlignItems) node.counterAxisAlignItems = spec.counterAxisAlignItems;
+      }
+      if (spec.children && spec.children.length) {
+        var chain = Promise.resolve();
+        for (var ci = 0; ci < spec.children.length; ci++) {
+          (function(child) { chain = chain.then(function() { return buildAutoNode(child, node); }); })(spec.children[ci]);
+        }
+        return chain.then(function() { finishNode(node, spec, parent); return node; });
+      }
+    }
+    finishNode(node, spec, parent);
+    return node;
+  });
+}
+
+function finishNode(node, spec, parent) {
+  node.name = spec.name || node.name;
+  if (spec.opacity != null) node.opacity = spec.opacity;
+  if (parent) {
+    parent.appendChild(node);
+    if (parent.layoutMode && parent.layoutMode !== "NONE") {
+      try { if (spec.fillWidth) node.layoutSizingHorizontal = "FILL"; if (spec.fillHeight) node.layoutSizingVertical = "FILL"; } catch(e){}
+    }
+  }
+}
+
+function createFrames(frames) {
+  var ids = { nodes: [] }; var center = figma.viewport.center; var allNodes = []; var ox = 0;
+  var chain = Promise.resolve();
+  for (var i = 0; i < frames.length; i++) {
+    (function(spec) {
+      chain = chain.then(function() {
+        return buildAutoNode(spec, null).then(function(node) {
+          node.x = Math.round(center.x + ox); node.y = Math.round(center.y);
+          figma.currentPage.appendChild(node); ox += node.width + 60;
+          allNodes.push(node); ids.nodes.push(node.id);
+        });
+      });
+    })(frames[i]);
+  }
+  return chain.then(function() {
+    if (allNodes.length) { figma.currentPage.selection = allNodes; figma.viewport.scrollAndZoomIntoView(allNodes); }
+    return ids;
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [Tokens] デザイントークン Import
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function flattenTokens(obj, prefix) {
+  var result = [];
+  var keys = Object.keys(obj);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var val = obj[key];
+    var path = prefix ? prefix + "/" + key : key;
+    if (val && typeof val === "object" && val.$value !== undefined) {
+      result.push({ name: path, type: val.$type || "string", value: val.$value, description: val.$description || "" });
+    } else if (val && typeof val === "object" && !Array.isArray(val)) {
+      result = result.concat(flattenTokens(val, path));
+    }
+  }
+  return result;
+}
+
+function importTokens(jsonStr) {
+  var parsed;
+  try { parsed = JSON.parse(jsonStr); } catch(e) { throw new Error("JSONパースエラー: " + e.message); }
+
+  var tokens = flattenTokens(parsed, "");
+  if (!tokens.length) throw new Error("トークンが見つかりませんでした");
+  if (tokens.length > 500) throw new Error("トークン数が上限(500)を超えています: " + tokens.length + "件");
+
+  // コレクション名ごとにグループ化（最上位キーで分類）
+  var groups = {};
+  for (var i = 0; i < tokens.length; i++) {
+    var t = tokens[i];
+    var parts = t.name.split("/");
+    var group = parts[0];
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(t);
+  }
+
+  var ids = { collections: [], variables: [] };
+  var groupNames = Object.keys(groups);
+
+  for (var g = 0; g < groupNames.length; g++) {
+    var gname = groupNames[g];
+    var items = groups[gname];
+    var coll = figma.variables.createVariableCollection(gname);
+    ids.collections.push(coll.id);
+    pluginCreatedCollections.push(coll.id);
+    var modeId = coll.modes[0].modeId || coll.modes[0].id;
+
+    for (var j = 0; j < items.length; j++) {
+      var tk = items[j];
+      var resolvedType;
+      var resolvedValue;
+
+      if (tk.type === "color") {
+        resolvedType = "COLOR";
+        resolvedValue = hex2rgb(String(tk.value));
+      } else if (tk.type === "number" || tk.type === "dimension" || tk.type === "fontWeight") {
+        resolvedType = "FLOAT";
+        resolvedValue = parseFloat(String(tk.value).replace("px", "").replace("rem", "")) || 0;
+      } else if (tk.type === "boolean") {
+        resolvedType = "BOOLEAN";
+        resolvedValue = !!tk.value;
+      } else {
+        resolvedType = "STRING";
+        resolvedValue = String(tk.value);
+      }
+
+      try {
+        var fv = figma.variables.createVariable(tk.name, coll.id, resolvedType);
+        ids.variables.push(fv.id);
+        fv.setValueForMode(modeId, resolvedValue);
+        if (tk.description) fv.description = tk.description;
+      } catch(e) {
+        // 重複や不正な名前はスキップ
+      }
+    }
+  }
+
+  return ids;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [Manage] コレクション管理
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function listCollections() {
+  var collections = figma.variables.getLocalVariableCollections();
+  var result = [];
+  for (var i = 0; i < collections.length; i++) {
+    var c = collections[i];
+    result.push({ id: c.id, name: c.name, variableCount: c.variableIds.length, modes: c.modes.length });
+  }
+  return result;
+}
+
+function clearAllCollections(onlyPluginCreated) {
+  var collections = figma.variables.getLocalVariableCollections();
+  var count = 0;
+  for (var i = 0; i < collections.length; i++) {
+    // onlyPluginCreated=true の場合、プラグインが作ったもののみ削除
+    if (onlyPluginCreated && pluginCreatedCollections.indexOf(collections[i].id) === -1) continue;
+    var vars = collections[i].variableIds;
+    for (var j = 0; j < vars.length; j++) {
+      try { var v = figma.variables.getVariableById(vars[j]); if (v) v.remove(); count++; } catch(e){}
+    }
+    var cid = collections[i].id;
+    try { collections[i].remove(); count++; } catch(e){}
+    var idx = pluginCreatedCollections.indexOf(cid);
+    if (idx !== -1) pluginCreatedCollections.splice(idx, 1);
+  }
+  return count;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Variables のみの場合にキャンバス上にスウォッチを自動生成
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function createVariableSwatch(spec) {
+  return ensureFonts().then(function() {
+    var SWATCH = 48;
+    var GAP = 8;
+    var PAD = 24;
+    var center = figma.viewport.center;
+
+    // 全コレクションのカラー変数を収集
+    var colorVars = [];
+    var floatVars = [];
+    for (var i = 0; i < spec.variables.length; i++) {
+      var col = spec.variables[i];
+      for (var j = 0; j < col.variables.length; j++) {
+        var v = col.variables[j];
+        if (v.type === "COLOR") colorVars.push({ name: v.name, value: v.value, collection: col.collection });
+        else floatVars.push({ name: v.name, value: v.value, collection: col.collection });
+      }
+    }
+
+    if (!colorVars.length && !floatVars.length) return null;
+
+    var cols = Math.min(Math.max(colorVars.length, 1), 8);
+    var rows = Math.ceil(colorVars.length / cols);
+    var frameW = PAD * 2 + cols * SWATCH + (cols - 1) * GAP;
+    var frameH = PAD + 40; // title area
+
+    // Color section height
+    if (colorVars.length) frameH += rows * SWATCH + (rows - 1) * GAP + 24 + 16; // swatches + labels space
+    // Float section height
+    if (floatVars.length) frameH += floatVars.length * 24 + 24;
+    frameH += PAD;
+
+    var root = figma.createFrame();
+    root.name = spec.name || "Variable Swatch";
+    root.resize(Math.max(frameW, 280), Math.max(frameH, 120));
+    root.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+    root.layoutMode = "VERTICAL";
+    root.paddingTop = root.paddingBottom = PAD;
+    root.paddingLeft = root.paddingRight = PAD;
+    root.itemSpacing = 16;
+    root.primaryAxisSizingMode = "AUTO";
+    root.counterAxisSizingMode = "AUTO";
+
+    // Title
+    var title = figma.createText();
+    title.fontName = { family: "Inter", style: "Semi Bold" };
+    title.characters = spec.name || "Variables";
+    title.fontSize = 16;
+    title.fills = solid("#0F172A");
+    root.appendChild(title);
+
+    if (spec.description) {
+      var desc = figma.createText();
+      desc.fontName = { family: "Inter", style: "Regular" };
+      desc.characters = spec.description;
+      desc.fontSize = 13;
+      desc.fills = solid("#64748B");
+      root.appendChild(desc);
+    }
+
+    // Color swatches
+    if (colorVars.length) {
+      var colorSection = figma.createFrame();
+      colorSection.name = "Colors";
+      colorSection.layoutMode = "VERTICAL";
+      colorSection.itemSpacing = 8;
+      colorSection.fills = [];
+      colorSection.primaryAxisSizingMode = "AUTO";
+      colorSection.counterAxisSizingMode = "AUTO";
+
+      var colorRow = null;
+      for (var ci = 0; ci < colorVars.length; ci++) {
+        if (ci % cols === 0) {
+          colorRow = figma.createFrame();
+          colorRow.name = "Row";
+          colorRow.layoutMode = "HORIZONTAL";
+          colorRow.itemSpacing = GAP;
+          colorRow.fills = [];
+          colorRow.primaryAxisSizingMode = "AUTO";
+          colorRow.counterAxisSizingMode = "AUTO";
+          colorSection.appendChild(colorRow);
+        }
+
+        var swatchGroup = figma.createFrame();
+        swatchGroup.name = colorVars[ci].name;
+        swatchGroup.layoutMode = "VERTICAL";
+        swatchGroup.itemSpacing = 4;
+        swatchGroup.fills = [];
+        swatchGroup.primaryAxisSizingMode = "AUTO";
+        swatchGroup.counterAxisSizingMode = "AUTO";
+
+        var swatch = figma.createRectangle();
+        swatch.name = "Color";
+        swatch.resize(SWATCH, SWATCH);
+        swatch.cornerRadius = 8;
+        swatch.fills = solid(colorVars[ci].value);
+        swatchGroup.appendChild(swatch);
+
+        var label = figma.createText();
+        label.fontName = { family: "Inter", style: "Regular" };
+        var shortName = colorVars[ci].name.split("/").pop();
+        label.characters = shortName;
+        label.fontSize = 12;
+        label.fills = solid("#64748B");
+        swatchGroup.appendChild(label);
+
+        colorRow.appendChild(swatchGroup);
+      }
+      root.appendChild(colorSection);
+    }
+
+    // Float values
+    if (floatVars.length) {
+      var floatSection = figma.createFrame();
+      floatSection.name = "Values";
+      floatSection.layoutMode = "VERTICAL";
+      floatSection.itemSpacing = 4;
+      floatSection.fills = [];
+      floatSection.primaryAxisSizingMode = "AUTO";
+      floatSection.counterAxisSizingMode = "AUTO";
+
+      for (var fi = 0; fi < floatVars.length; fi++) {
+        var row = figma.createFrame();
+        row.name = floatVars[fi].name;
+        row.layoutMode = "HORIZONTAL";
+        row.itemSpacing = 8;
+        row.fills = [];
+        row.primaryAxisSizingMode = "AUTO";
+        row.counterAxisSizingMode = "AUTO";
+
+        var nameText = figma.createText();
+        nameText.fontName = { family: "Inter", style: "Medium" };
+        nameText.characters = floatVars[fi].name.split("/").pop();
+        nameText.fontSize = 13;
+        nameText.fills = solid("#0F172A");
+        row.appendChild(nameText);
+
+        var valText = figma.createText();
+        valText.fontName = { family: "Inter", style: "Regular" };
+        valText.characters = String(floatVars[fi].value);
+        valText.fontSize = 13;
+        valText.fills = solid("#64748B");
+        row.appendChild(valText);
+
+        floatSection.appendChild(row);
+      }
+      root.appendChild(floatSection);
+    }
+
+    root.x = Math.round(center.x - root.width / 2);
+    root.y = Math.round(center.y - root.height / 2);
+    figma.currentPage.selection = [root];
+    figma.viewport.scrollAndZoomIntoView([root]);
+    return root.id;
+  });
+}
+
+// ── パス指定ノード検索（"Parent/Child" 形式もサポート）──
+function findByPath(root, path) {
+  if (!path || !root) return null;
+  if (typeof root.findOne !== "function") return null;
+  var parts = path.split("/");
+  if (parts.length > 1) {
+    var node = root;
+    for (var p = 0; p < parts.length; p++) {
+      if (!node || typeof node.findOne !== "function") return null;
+      var seg = parts[p];
+      node = node.findOne(function(n) { return n.name === seg; });
+      if (!node) return null;
+    }
+    return node;
+  }
+  return root.findOne(function(n) { return n.name === path; });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// [Review] As-Is → To-Be クローン + 修正適用
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function applyReview(modifications) {
+  var sel = figma.currentPage.selection;
+  if (!sel.length) return Promise.reject(new Error("フレームが選択されていません"));
+
+  var original = sel[0];
+  var originalOldName = original.name;
+  var clone = original.clone();
+  var renames = [];
+
+  // To-Be としてラベル付け・配置
+  clone.name = originalOldName + " \u2014 To-Be";
+  clone.x = original.x + original.width + 60;
+  clone.y = original.y;
+
+  // As-Is ラベルも追記（Undo時に元名に戻す）
+  if (originalOldName.indexOf("As-Is") === -1 && originalOldName.indexOf("To-Be") === -1) {
+    original.name = originalOldName + " \u2014 As-Is";
+    renames.push({ id: original.id, oldName: originalOldName });
+  }
+
+  // テキスト変更に必要なフォントを事前ロード
+  var textActions = ["set_text", "set_font_size", "set_font_weight"];
+  var fontPromises = [ensureFonts()];
+
+  for (var i = 0; i < modifications.length; i++) {
+    var mod = modifications[i];
+    if (textActions.indexOf(mod.action) !== -1) {
+      var target = findByPath(clone, mod.target);
+      if (target && target.type === "TEXT") {
+        var fn = target.fontName;
+        if (fn && fn !== figma.mixed) {
+          fontPromises.push(figma.loadFontAsync(fn));
+        }
+        if (mod.action === "set_font_weight") {
+          fontPromises.push(figma.loadFontAsync({ family: "Inter", style: WMAP[mod.value] || "Regular" }));
+        }
+      }
+    }
+  }
+
+  return Promise.all(fontPromises).then(function() {
+    var applied = 0;
+    for (var i = 0; i < modifications.length; i++) {
+      var mod = modifications[i];
+      var target = findByPath(clone, mod.target);
+      if (!target) continue;
+
+      try {
+        switch (mod.action) {
+          case "set_fill":
+            target.fills = solid(mod.value);
+            applied++; break;
+          case "set_text":
+            if (target.type === "TEXT") { target.characters = String(mod.value); applied++; }
+            break;
+          case "set_font_size":
+            if (target.type === "TEXT") { target.fontSize = Number(mod.value); applied++; }
+            break;
+          case "set_font_weight":
+            if (target.type === "TEXT") { target.fontName = { family: "Inter", style: WMAP[mod.value] || "Regular" }; applied++; }
+            break;
+          case "set_corner_radius":
+            if ("cornerRadius" in target) { target.cornerRadius = Number(mod.value); applied++; }
+            break;
+          case "set_padding":
+            var pv = Number(mod.value);
+            target.paddingTop = target.paddingBottom = target.paddingLeft = target.paddingRight = pv;
+            applied++; break;
+          case "set_item_spacing":
+            if ("itemSpacing" in target) { target.itemSpacing = Number(mod.value); applied++; }
+            break;
+          case "set_opacity":
+            target.opacity = Number(mod.value);
+            applied++; break;
+          case "set_stroke":
+            target.strokes = solid(mod.value); target.strokeWeight = d(target.strokeWeight, 1);
+            applied++; break;
+          case "remove":
+            target.remove();
+            applied++; break;
+        }
+      } catch(e) { /* skip failed modifications */ }
+    }
+
+    // 両方を選択してズーム
+    figma.currentPage.selection = [original, clone];
+    figma.viewport.scrollAndZoomIntoView([original, clone]);
+
+    return { cloneId: clone.id, applied: applied, originalName: original.name, renames: renames };
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// メッセージハンドラ
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+figma.ui.onmessage = function(msg) {
+
+  // ── Generate: AI生成 ──
+  if (msg.type === "generate") {
+    var spec = msg.spec;
+    var entry = { collections: [], variables: [], nodes: [] };
+    var chain = Promise.resolve();
+
+    if (spec.variables && spec.variables.length) {
+      chain = chain.then(function() {
+        var r = createVars(spec.variables);
+        entry.collections = entry.collections.concat(r.collections);
+        entry.variables = entry.variables.concat(r.variables);
+      });
+    }
+    if (spec.components && spec.components.length) {
+      chain = chain.then(function() {
+        return createComps(spec.components).then(function(r) { entry.nodes = entry.nodes.concat(r.nodes); });
+      });
+    }
+    if (spec.frames && spec.frames.length) {
+      chain = chain.then(function() {
+        return createFrames(spec.frames).then(function(r) { entry.nodes = entry.nodes.concat(r.nodes); });
+      });
+    }
+
+    // Variables のみでキャンバス上に何もない場合、スウォッチを自動生成
+    var hasCanvas = (spec.components && spec.components.length) || (spec.frames && spec.frames.length);
+    if (!hasCanvas && spec.variables && spec.variables.length) {
+      chain = chain.then(function() {
+        return createVariableSwatch(spec).then(function(nodeId) {
+          if (nodeId) entry.nodes.push(nodeId);
+        });
+      });
+    }
+
+    chain.then(function() {
+      undoStack.push(entry);
+      var parts = [];
+      if (entry.variables.length) parts.push("Variables x" + entry.variables.length);
+      if (spec.components && spec.components.length) parts.push("Components x" + spec.components.length);
+      if (spec.frames && spec.frames.length) parts.push("Frames x" + spec.frames.length);
+      figma.ui.postMessage({ type: "done", undoCount: undoStack.length, summary: parts.join(", ") });
+      figma.notify("\u2713 " + (parts.join(", ") || "\u751F\u6210\u5B8C\u4E86"));
+    }).catch(function(e) {
+      figma.ui.postMessage({ type: "error", error: e.message || String(e) });
     });
   }
-  if (msg.type === "save-settings") {
-    const s = msg.settings;
-    const tasks = [];
-    if (s.apiKey !== void 0)
-      tasks.push(figma.clientStorage.setAsync("oai_key", s.apiKey));
-    if (s.model !== void 0)
-      tasks.push(figma.clientStorage.setAsync("oai_model", s.model));
-    if (s.domain !== void 0)
-      tasks.push(figma.clientStorage.setAsync("domain", s.domain));
-    if (s.proxyUrl !== void 0)
-      tasks.push(figma.clientStorage.setAsync("proxy_url", s.proxyUrl));
-    if (s.projectKnowledge !== void 0)
-      tasks.push(figma.clientStorage.setAsync("project_knowledge", s.projectKnowledge));
-    await Promise.all(tasks);
+
+  // ── Review: As-Is → To-Be 適用 ──
+  if (msg.type === "apply-review") {
+    applyReview(msg.modifications).then(function(result) {
+      undoStack.push({ collections: [], variables: [], nodes: [result.cloneId], renames: result.renames });
+      figma.ui.postMessage({ type: "review-applied", applied: result.applied, undoCount: undoStack.length });
+      figma.notify("\u2713 To-Be\u3092\u751F\u6210 (" + result.applied + "\u4EF6\u9069\u7528)");
+    }).catch(function(e) {
+      figma.ui.postMessage({ type: "review-error", error: e.message || String(e) });
+    });
   }
-  if (msg.type === "save-review-history") {
-    const existing = (_a = await figma.clientStorage.getAsync("review_history")) != null ? _a : [];
-    const filtered = existing.filter((e) => e.frameId !== msg.entry.frameId);
-    const updated = [msg.entry, ...filtered].slice(0, 20);
-    await figma.clientStorage.setAsync("review_history", updated);
-    figma.ui.postMessage({ type: "history-saved", history: updated });
+
+  // ── Review: To-Be フレーム新規生成 ──
+  if (msg.type === "generate-tobe") {
+    var sel = figma.currentPage.selection;
+    var original = sel.length ? sel[0] : null;
+    var renames = [];
+
+    // 元フレームに As-Is ラベル
+    if (original && original.name.indexOf("As-Is") === -1 && original.name.indexOf("To-Be") === -1) {
+      var oldName = original.name;
+      original.name = oldName + " \u2014 As-Is";
+      renames.push({ id: original.id, oldName: oldName });
+    }
+
+    // To-Be フレームを生成
+    var toBeSpec = msg.toBeFrame;
+    if (!toBeSpec.name || toBeSpec.name.indexOf("To-Be") === -1) {
+      toBeSpec.name = (toBeSpec.name || "UI") + " \u2014 To-Be";
+    }
+
+    createFrames([toBeSpec]).then(function(r) {
+      // 元フレームの右に配置
+      if (original && r.nodes.length) {
+        var toBeNode = figma.getNodeById(r.nodes[0]);
+        if (toBeNode) {
+          toBeNode.x = original.x + original.width + 60;
+          toBeNode.y = original.y;
+          figma.currentPage.selection = [original, toBeNode];
+          figma.viewport.scrollAndZoomIntoView([original, toBeNode]);
+        }
+      }
+      undoStack.push({ collections: [], variables: [], nodes: r.nodes, renames: renames });
+      figma.ui.postMessage({ type: "tobe-done", undoCount: undoStack.length });
+      figma.notify("\u2713 To-Be UI\u3092\u751F\u6210\u3057\u307E\u3057\u305F");
+    }).catch(function(e) {
+      figma.ui.postMessage({ type: "review-error", error: e.message || String(e) });
+    });
   }
-  if (msg.type === "copy-text") {
-    figma.ui.postMessage({ type: "do-copy", text: msg.text });
-    figma.notify("\u30AF\u30EA\u30C3\u30D7\u30DC\u30FC\u30C9\u306B\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F \u2713");
+
+  // ── Review: ノードハイライト ──
+  if (msg.type === "highlight-node") {
+    var nodeName = msg.nodeName;
+    if (!nodeName) return;
+
+    var target = null;
+    var sel = figma.currentPage.selection;
+
+    // 1) 選択中ノード自身が対象か
+    if (sel.length && sel[0].name === nodeName) { target = sel[0]; }
+    // 2) 選択中ノードの子孫を検索
+    if (!target && sel.length) {
+      var root = sel[0];
+      // 親フレームまで遡る（子ノードが選択中の場合）
+      while (root.parent && root.parent.type !== "PAGE") root = root.parent;
+      if (typeof root.findOne === "function") {
+        target = root.findOne(function(n) { return n.name === nodeName; });
+      }
+    }
+    // 3) ページ全体から検索
+    if (!target) {
+      target = figma.currentPage.findOne(function(n) { return n.name === nodeName; });
+    }
+
+    if (target) {
+      figma.currentPage.selection = [target];
+      figma.viewport.scrollAndZoomIntoView([target]);
+      figma.notify(target.name + " (" + Math.round(target.width) + "x" + Math.round(target.height) + ")");
+    } else {
+      figma.notify(nodeName + " が見つかりません");
+    }
   }
+
+  // ── Review: 履歴 CRUD ──
+  if (msg.type === "save-review") {
+    figma.clientStorage.getAsync("review_history").then(function(existing) {
+      var history = existing || [];
+      // 同じフレームの古い履歴を保持しつつ新規追加（最大20件）
+      history.unshift(msg.entry);
+      if (history.length > 20) history = history.slice(0, 20);
+      return figma.clientStorage.setAsync("review_history", history).then(function() {
+        figma.ui.postMessage({ type: "review-history", history: history });
+      });
+    });
+  }
+
+  if (msg.type === "load-review-history") {
+    figma.clientStorage.getAsync("review_history").then(function(history) {
+      figma.ui.postMessage({ type: "review-history", history: history || [] });
+    });
+  }
+
+  if (msg.type === "delete-review") {
+    figma.clientStorage.getAsync("review_history").then(function(existing) {
+      var history = (existing || []).filter(function(e) { return e.id !== msg.id; });
+      return figma.clientStorage.setAsync("review_history", history).then(function() {
+        figma.ui.postMessage({ type: "review-history", history: history });
+      });
+    });
+  }
+
+  if (msg.type === "clear-review-history") {
+    figma.clientStorage.setAsync("review_history", []).then(function() {
+      figma.ui.postMessage({ type: "review-history", history: [] });
+    });
+  }
+
+  // ── Tokens: デザイントークンImport ──
+  if (msg.type === "import-tokens") {
+    try {
+      var result = importTokens(msg.json);
+      undoStack.push({ collections: result.collections, variables: result.variables, nodes: [] });
+      figma.ui.postMessage({ type: "import-done", collections: result.collections.length, variables: result.variables.length, undoCount: undoStack.length });
+      figma.notify("\u2713 " + result.collections.length + " collections, " + result.variables.length + " variables");
+    } catch(e) {
+      figma.ui.postMessage({ type: "import-error", error: e.message || String(e) });
+    }
+  }
+
+  // ── Manage: コレクション一覧 ──
+  if (msg.type === "list-collections") {
+    figma.ui.postMessage({ type: "collections-list", collections: listCollections() });
+  }
+
+  // ── Manage: 全コレクション削除 ──
+  if (msg.type === "clear-all-collections") {
+    var count = clearAllCollections(msg.onlyPlugin);
+    figma.ui.postMessage({ type: "clear-done", count: count });
+    figma.notify("\u2713 " + count + " \u4EF6\u524A\u9664");
+  }
+
+  // ── Undo ──
+  if (msg.type === "undo") {
+    if (!undoStack.length) { figma.ui.postMessage({ type: "undo-done", undoCount: 0 }); return; }
+    undoEntry(undoStack.pop());
+    figma.ui.postMessage({ type: "undo-done", undoCount: undoStack.length });
+    figma.notify("\u2713 \u5143\u306B\u623B\u3057\u307E\u3057\u305F");
+  }
+
+  if (msg.type === "undo-all") {
+    while (undoStack.length) undoEntry(undoStack.pop());
+    figma.ui.postMessage({ type: "undo-done", undoCount: 0 });
+    figma.notify("\u2713 \u5168\u524A\u9664\u5B8C\u4E86");
+  }
+
+  // ── 設定 ──
+  if (msg.type === "load-settings") {
+    Promise.all([
+      figma.clientStorage.getAsync("api_key"),
+      figma.clientStorage.getAsync("model"),
+    ]).then(function(r) {
+      figma.ui.postMessage({ type: "settings-loaded", apiKey: r[0] || "", model: r[1] || "gemini-2.5-flash" });
+    });
+    // 初回選択通知
+    notifySelection();
+  }
+
   if (msg.type === "resize") {
     figma.ui.resize(
       Math.min(Math.max(msg.width, 380), 1200),
-      Math.min(Math.max(msg.height, 500), 1e3)
+      Math.min(Math.max(msg.height, 400), 1000)
     );
+  }
+
+  if (msg.type === "save-settings") {
+    Promise.all([
+      figma.clientStorage.setAsync("api_key", msg.apiKey || ""),
+      figma.clientStorage.setAsync("model", msg.model || "gemini-2.5-flash"),
+    ]);
   }
 };
