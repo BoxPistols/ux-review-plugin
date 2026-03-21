@@ -238,6 +238,11 @@ html, body {
 .mod-value { color: var(--text); font-weight: 600; }
 .mod-reason { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
 
+/* ── Chat ── */
+.chat-msg { font-size: 13px; line-height: 1.65; padding: 8px 12px; border-radius: 8px; max-width: 90%; }
+.chat-msg.user { background: var(--accent-soft); color: var(--text); align-self: flex-end; }
+.chat-msg.ai { background: var(--surface); color: var(--text-sub); align-self: flex-start; border: 1px solid var(--border); }
+
 /* ── Copy button (per section) ── */
 .copy-btn {
   background: none; border: 1px solid var(--border); border-radius: 4px;
@@ -449,6 +454,15 @@ html, body {
         </div>
         <div id="reviewHistoryList"></div>
       </div>
+      <!-- チャット -->
+      <div class="hidden" id="chatSection">
+        <div class="section-title">チャット</div>
+        <div id="chatMessages" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input class="ctx-input" id="chatInput" placeholder="デザインについて質問..." style="flex:1;width:auto" />
+          <button class="copy-btn" id="btnChat" style="padding:4px 12px">送信</button>
+        </div>
+      </div>
       <div class="log" id="reviewLog"></div>
     </div>
   </div>
@@ -476,7 +490,7 @@ html, body {
       <!-- Imageモード -->
       <div class="hidden" id="imageArea" style="flex:1;display:flex;flex-direction:column;gap:8px;min-height:0">
         <div class="img-drop" id="imgDrop">
-          <div style="text-align:center;color:var(--text-dim)">画像をドラッグ＆ドロップ、またはクリックして選択</div>
+          <div style="text-align:center;color:var(--text-dim);line-height:1.8">Ctrl+V でキャプチャ貼り付け<br>ドラッグ＆ドロップ / クリックして選択</div>
           <input type="file" id="imgFile" accept="image/*" style="display:none" />
         </div>
         <img id="imgPreviewEl" class="hidden" style="max-height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border)" />
@@ -979,6 +993,7 @@ function doReviewImprove() {
     currentReview = result
     renderReviewPreview(result)
     reviewLoading = false; $('btnReview').disabled = false; updateBottomBar()
+    initChat()
 
     // 履歴に自動保存
     var frameName = selectedNodes.length ? selectedNodes[0].name : 'Unknown'
@@ -1221,13 +1236,28 @@ function loadImage(file) {
   if (!file.type.startsWith('image/')) return
   var reader = new FileReader()
   reader.onload = function(e) {
-    imgBase64 = e.target.result // data:image/...;base64,...
+    imgBase64 = e.target.result
     $('imgPreviewEl').src = imgBase64
     show($('imgPreviewEl'))
     $('imgDrop').style.display = 'none'
   }
   reader.readAsDataURL(file)
 }
+
+// Ctrl+V でクリップボード画像を貼り付け
+document.addEventListener('paste', function(e) {
+  if (genMode !== 'image') return
+  var items = e.clipboardData && e.clipboardData.items
+  if (!items) return
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      var file = items[i].getAsFile()
+      if (file) loadImage(file)
+      e.preventDefault()
+      return
+    }
+  }
+})
 
 function getContextString() {
   var parts = []
@@ -1510,11 +1540,12 @@ document.addEventListener('keydown', function(e) {
 // ══════════════════════════════════════════════════════════════
 // リサイズ
 // ══════════════════════════════════════════════════════════════
-var expandState = 0 // 0=default, 1=medium, 2=max
+var expandState = 0
 var SIZES = [
   { w: 480, h: 680 },
   { w: 720, h: 860 },
   { w: 1200, h: 1000 },
+  { w: Math.min(screen.width - 200, 1400), h: Math.min(screen.height - 150, 1000) },
 ]
 function postResize(w, h) {
   parent.postMessage({ pluginMessage: { type: 'resize', width: Math.round(w), height: Math.round(h) } }, '*')
@@ -1530,6 +1561,75 @@ $('btnExpand').addEventListener('click', function() {
   window.addEventListener('mousemove', function(e) { if (!drag) return; postResize(Math.max(380, sw + e.clientX - sx), Math.max(400, sh + e.clientY - sy)) })
   window.addEventListener('mouseup', function() { drag = false })
 })()
+
+// ══════════════════════════════════════════════════════════════
+// チャット（レビュー結果について対話）
+// ══════════════════════════════════════════════════════════════
+var chatHistory = []
+
+function initChat() {
+  if (!currentReview) return
+  chatHistory = [
+    { role: 'system', content: 'あなたはUI/UXデザインの専門家です。以下のレビュー結果について、デザイナーからの質問に日本語で答えてください。具体的な改善案、判断根拠（Nielsen原則、Gutenberg図版等）、エンジニアへの伝え方を含めてください。\n\nレビュー結果:\nスコア: ' + currentReview.score + '/100\n現状分析: ' + (currentReview.asIs || '') + '\n改善提案: ' + (currentReview.toBe || '') + '\n指摘:\n' + ((currentReview.details || []).map(function(d) { return '[' + d.severity + '] ' + d.category + ': ' + d.message }).join('\n')) }
+  ]
+  $('chatMessages').innerHTML = ''
+  show($('chatSection'))
+}
+
+function sendChat() {
+  var text = $('chatInput').value.trim()
+  if (!text) return
+  $('chatInput').value = ''
+
+  // ユーザーメッセージ表示
+  var userDiv = document.createElement('div')
+  userDiv.className = 'chat-msg user'
+  userDiv.textContent = text
+  $('chatMessages').appendChild(userDiv)
+
+  chatHistory.push({ role: 'user', content: text })
+
+  // AI呼び出し
+  var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
+  if (!apiKey) return
+
+  var p
+  if (isGemini(model)) {
+    var geminiContents = []
+    for (var i = 0; i < chatHistory.length; i++) {
+      var ch = chatHistory[i]
+      if (ch.role === 'system') continue
+      geminiContents.push({ role: ch.role === 'assistant' ? 'model' : 'user', parts: [{ text: ch.content }] })
+    }
+    p = fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system_instruction: { parts: [{ text: chatHistory[0].content }] }, contents: geminiContents })
+    }).then(function(r) { if (!r.ok) throw new Error('API error'); return r.json() })
+      .then(function(d) { return d.candidates[0].content.parts[0].text })
+  } else {
+    p = fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({ model: model, messages: chatHistory, max_completion_tokens: 2000 })
+    }).then(function(r) { if (!r.ok) throw new Error('API error'); return r.json() })
+      .then(function(d) { return d.choices[0].message.content })
+  }
+
+  p.then(function(reply) {
+    chatHistory.push({ role: 'assistant', content: reply })
+    var aiDiv = document.createElement('div')
+    aiDiv.className = 'chat-msg ai'
+    aiDiv.textContent = reply
+    $('chatMessages').appendChild(aiDiv)
+    $('chatMessages').scrollTop = $('chatMessages').scrollHeight
+  }).catch(function(e) {
+    addLog('reviewLog', 'error', 'チャットエラー: ' + e.message)
+  })
+}
+
+$('btnChat').addEventListener('click', sendChat)
+$('chatInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() }
+})
 
 // ══════════════════════════════════════════════════════════════
 // テーマ切替

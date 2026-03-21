@@ -909,8 +909,8 @@ figma.ui.onmessage = function(msg) {
 
   if (msg.type === "resize") {
     figma.ui.resize(
-      Math.min(Math.max(msg.width, 380), 1200),
-      Math.min(Math.max(msg.height, 400), 1000)
+      Math.min(Math.max(msg.width, 380), 1600),
+      Math.min(Math.max(msg.height, 400), 1200)
     );
   }
 
