@@ -1337,9 +1337,9 @@ function renderGenHistory(history) {
     h += '<button class="hist-del" data-gen-del="' + e.id + '" title="削除">×</button>'
     h += '</div>'
     h += '<div class="hist-summary">' + (e.input || '').slice(0, 150) + '</div>'
-    h += '<div style="display:flex;gap:8px;margin-top:8px">'
-    h += '<button class="btn btn-secondary" style="flex:0;padding:4px 12px;font-size:12px" data-gen-reuse="' + i + '">入力を復元</button>'
-    if (hasSpec) h += '<button class="btn btn-primary" style="flex:0;padding:4px 12px;font-size:12px" data-gen-regen="' + i + '">再生成</button>'
+    h += '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:nowrap">'
+    h += '<button style="padding:4px 12px;font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text-sub);cursor:pointer;white-space:nowrap;font-family:var(--font)" data-gen-reuse="' + i + '">入力を復元</button>'
+    if (hasSpec) h += '<button style="padding:4px 12px;font-size:12px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer;white-space:nowrap;font-family:var(--font)" data-gen-regen="' + i + '">再生成</button>'
     h += '</div>'
     h += '</div>'
   }
