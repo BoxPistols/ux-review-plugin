@@ -182,7 +182,12 @@ function buildAutoNode(spec, parent) {
       node = figma.createFrame();
       node.resize(Math.max(d(spec.width, 100), 1), Math.max(d(spec.height, 100), 1));
       var bg = spec.fill || spec.background;
-      node.fills = (bg && bg !== "transparent" && bg !== "none") ? solid(bg) : [];
+      if (bg && bg !== "transparent" && bg !== "none") {
+        node.fills = solid(bg);
+      } else {
+        // fill未指定のコンテナFRAMEは透明（Figmaデフォルトの白塗りを除去）
+        node.fills = [];
+      }
       if (spec.cornerRadius != null) node.cornerRadius = spec.cornerRadius;
       if (spec.stroke) { node.strokes = solid(spec.stroke); node.strokeWeight = d(spec.strokeWidth, 1); }
       if (spec.layoutMode) {
