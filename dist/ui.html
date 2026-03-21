@@ -486,6 +486,7 @@ document.querySelectorAll('.tab').forEach(function(t) {
 
 var currentReview = null
 var selectedNodes = []
+var selectedComponentSet = null
 var reviewLoading = false
 var genLoading = false
 
@@ -559,14 +560,20 @@ window.onmessage = function(event) {
   // Selection
   if (msg.type === 'selection-changed') {
     selectedNodes = msg.nodes
+    selectedComponentSet = msg.componentSetInfo || null
     $('selDot').classList.add('on')
     var n = msg.nodes[0]
-    $('selName').textContent = msg.isMulti ? msg.nodes.length + 'フレームを選択中' : n.name
+    if (selectedComponentSet) {
+      $('selName').textContent = '◆ ' + selectedComponentSet.name + ' (' + selectedComponentSet.variantCount + ' variants)'
+    } else {
+      $('selName').textContent = msg.isMulti ? msg.nodes.length + 'フレームを選択中' : n.name
+    }
     $('selMeta').textContent = n.width ? n.width + '×' + n.height : ''
     updateBottomBar()
   }
   if (msg.type === 'selection-cleared') {
     selectedNodes = []
+    selectedComponentSet = null
     $('selDot').classList.remove('on')
     $('selName').textContent = 'フレームを選択してください'
     $('selMeta').textContent = ''
@@ -650,7 +657,9 @@ var SYSTEM_PROMPT = [
 '- fill="#000000" の使用は絶対禁止。黒背景のFRAMEは一切作らない',
 '- ルートフレームのfillは必ず "#FFFFFF"',
 '- ボタンは cornerRadius:12, paddingY:12（高さは自動。height指定しない）',
-'- fillWidth:true で親幅いっぱいに',
+'- ボタンに fillWidth:true を使わない（ボタンは内容幅に合わせる。フォーム内の送信ボタンのみ例外）',
+'- カード・入力フィールドは fillWidth:true',
+'- コンポーネントショーケースではボタンをHORIZONTALで横並び、またはグリッド配置にする',
 '',
 '━━━ 構造テンプレート ━━━',
 '',
@@ -661,17 +670,17 @@ var SYSTEM_PROMPT = [
 '{"type":"FRAME","name":"CardList","layoutMode":"VERTICAL","itemSpacing":12,"fillWidth":true,"children":[...]}',
 '※ fill を書かない = 透明',
 '',
-'■ Filled Button:',
-'{"type":"FRAME","name":"Button","layoutMode":"HORIZONTAL","paddingX":24,"paddingY":12,"fill":"#2563EB","cornerRadius":12,"fillWidth":true,"primaryAxisAlignItems":"CENTER","counterAxisAlignItems":"CENTER","children":[',
+'■ Filled Button（内容幅。fillWidth禁止）:',
+'{"type":"FRAME","name":"Button","layoutMode":"HORIZONTAL","paddingX":24,"paddingY":12,"fill":"#2563EB","cornerRadius":12,"primaryAxisAlignItems":"CENTER","counterAxisAlignItems":"CENTER","children":[',
 '  {"type":"TEXT","text":"ボタン","fontSize":14,"fontWeight":"SemiBold","color":"#FFFFFF"}]}',
 '',
 '■ Outlined Button:',
-'{"type":"FRAME","name":"Button","layoutMode":"HORIZONTAL","paddingX":24,"paddingY":12,"cornerRadius":12,"stroke":"#E2E8F0","strokeWidth":1,"fillWidth":true,"primaryAxisAlignItems":"CENTER","counterAxisAlignItems":"CENTER","children":[',
+'{"type":"FRAME","name":"Button","layoutMode":"HORIZONTAL","paddingX":24,"paddingY":12,"cornerRadius":12,"stroke":"#E2E8F0","strokeWidth":1,"primaryAxisAlignItems":"CENTER","counterAxisAlignItems":"CENTER","children":[',
 '  {"type":"TEXT","text":"ボタン","fontSize":14,"fontWeight":"SemiBold","color":"#2563EB"}]}',
 '',
-'■ Text Button:',
-'{"type":"FRAME","name":"TextButton","layoutMode":"HORIZONTAL","paddingX":12,"paddingY":8,"fillWidth":true,"primaryAxisAlignItems":"CENTER","counterAxisAlignItems":"CENTER","children":[',
-'  {"type":"TEXT","text":"ボタン","fontSize":14,"fontWeight":"SemiBold","color":"#2563EB"}]}',
+'■ ボタン横並び（ショーケース用）:',
+'{"type":"FRAME","name":"ButtonRow","layoutMode":"HORIZONTAL","itemSpacing":12,"fillWidth":true,"children":[',
+'  (上記ボタンを並べる)]}',
 '',
 '■ 入力フィールド:',
 '{"type":"FRAME","name":"SearchBar","layoutMode":"HORIZONTAL","paddingX":16,"paddingY":14,"fill":"#F1F5F9","cornerRadius":12,"stroke":"#E2E8F0","strokeWidth":1,"fillWidth":true,"counterAxisAlignItems":"CENTER","children":[',
@@ -1080,16 +1089,27 @@ function doGenerate() {
   } else {
     input = $('prompt').value.trim()
     if (!input) return
-    promptText = null // uses default SYSTEM_PROMPT
+    promptText = null
+  }
+
+  // ComponentSet 選択中なら既存構造を文脈に追加
+  if (selectedComponentSet && genMode === 'prompt') {
+    var csCtx = '\n\n【既存ComponentSet: ' + selectedComponentSet.name + '】\n'
+    csCtx += '現在のバリアント:\n'
+    for (var vi = 0; vi < selectedComponentSet.variants.length; vi++) {
+      var v = selectedComponentSet.variants[vi]
+      csCtx += '- ' + v.name + (v.fill ? ' (fill:' + v.fill + ')' : '') + '\n'
+    }
+    csCtx += '\nユーザーの指示に従い、既存のスタイル（色・サイズ・padding・cornerRadius）を踏襲した新しいバリアントを components として出力してください。'
+    input = input + csCtx
   }
 
   $('btnRun').disabled = true; genLoading = true
-  $('statusGenText').textContent = genMode === 'code' ? 'コードをFigma構造に変換中...' : 'AIが構造を生成中...'
+  $('statusGenText').textContent = selectedComponentSet ? '既存セットに追加中...' : (genMode === 'code' ? 'コードを変換中...' : 'AIが構造を生成中...')
   updateBottomBar()
 
   var p
   if (promptText) {
-    // Code mode: use CODE_TO_FIGMA_PROMPT
     p = callAIWithPrompt(promptText, input)
   } else {
     p = callAI(input)
@@ -1120,7 +1140,17 @@ function doConfirm() {
     name: currentSpec.name || 'Generated',
   }}}, '*')
 
-  parent.postMessage({ pluginMessage: { type: 'generate', spec: currentSpec } }, '*')
+  // ComponentSet 選択中 + components がある場合は既存セットに追加
+  if (selectedComponentSet && currentSpec.components && currentSpec.components.length) {
+    var allVariants = []
+    for (var ci = 0; ci < currentSpec.components.length; ci++) {
+      allVariants = allVariants.concat(currentSpec.components[ci].variants)
+    }
+    parent.postMessage({ pluginMessage: { type: 'add-variants', componentSetId: selectedComponentSet.id, variants: allVariants } }, '*')
+  } else {
+    parent.postMessage({ pluginMessage: { type: 'generate', spec: currentSpec } }, '*')
+  }
+
   currentSpec = null
   if (genMode === 'code') { show($('codeInput')) } else { show($('prompt')) }
   hide($('genPreview')); updateBottomBar()

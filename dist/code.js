@@ -85,7 +85,40 @@ function notifySelection() {
   }
   var nodes = [];
   for (var i = 0; i < sel.length; i++) { var n = extractNode(sel[i], 0); if (n) nodes.push(n); }
-  figma.ui.postMessage({ type: "selection-changed", nodes: nodes, isMulti: nodes.length > 1, currentPage: figma.currentPage.name, fileContext: fc });
+
+  // ComponentSet が選択されている場合、バリアント情報も送信
+  var componentSetInfo = null;
+  var s = sel[0];
+  if (s.type === "COMPONENT_SET") {
+    componentSetInfo = extractComponentSetInfo(s);
+  } else if (s.type === "COMPONENT" && s.parent && s.parent.type === "COMPONENT_SET") {
+    componentSetInfo = extractComponentSetInfo(s.parent);
+  }
+
+  figma.ui.postMessage({ type: "selection-changed", nodes: nodes, isMulti: nodes.length > 1, currentPage: figma.currentPage.name, fileContext: fc, componentSetInfo: componentSetInfo });
+}
+
+function extractComponentSetInfo(cs) {
+  var variants = [];
+  for (var i = 0; i < cs.children.length; i++) {
+    var child = cs.children[i];
+    if (child.type === "COMPONENT") {
+      var props = {};
+      var parts = child.name.split(", ");
+      for (var j = 0; j < parts.length; j++) {
+        var kv = parts[j].split("=");
+        if (kv.length === 2) props[kv[0].trim()] = kv[1].trim();
+      }
+      // スタイル情報も抽出
+      var fill = null;
+      if (child.fills && child.fills.length && child.fills[0].type === "SOLID") {
+        var c = child.fills[0].color;
+        fill = "#" + Math.round(c.r*255).toString(16).padStart(2,"0") + Math.round(c.g*255).toString(16).padStart(2,"0") + Math.round(c.b*255).toString(16).padStart(2,"0");
+      }
+      variants.push({ name: child.name, props: props, fill: fill, width: Math.round(child.width), height: Math.round(child.height) });
+    }
+  }
+  return { id: cs.id, name: cs.name, variantCount: variants.length, variants: variants };
 }
 
 figma.on("selectionchange", notifySelection);
@@ -635,6 +668,81 @@ function applyReview(modifications) {
 // メッセージハンドラ
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 figma.ui.onmessage = function(msg) {
+
+  // ── Generate: 既存 ComponentSet にバリアント追加 ──
+  if (msg.type === "add-variants") {
+    var csId = msg.componentSetId;
+    var cs = figma.getNodeById(csId);
+    if (!cs || cs.type !== "COMPONENT_SET") {
+      figma.ui.postMessage({ type: "error", error: "ComponentSetが見つかりません。再選択してください" });
+      return;
+    }
+
+    ensureFonts().then(function() {
+      var newNodes = [];
+      var variants = msg.variants;
+      for (var i = 0; i < variants.length; i++) {
+        var vr = variants[i];
+        var c = figma.createComponent();
+        c.layoutMode = "HORIZONTAL";
+        c.primaryAxisAlignItems = "CENTER";
+        c.counterAxisAlignItems = "CENTER";
+        c.primaryAxisSizingMode = "AUTO";
+        c.counterAxisSizingMode = "AUTO";
+        c.paddingLeft = c.paddingRight = d(vr.paddingX, 16);
+        c.paddingTop = c.paddingBottom = d(vr.paddingY, 10);
+        c.cornerRadius = d(vr.cornerRadius, 8);
+        c.itemSpacing = d(vr.gap, 8);
+
+        var fill = vr.fill;
+        c.fills = (fill && fill !== "none" && fill !== "transparent") ? solid(fill) : [];
+        if (vr.stroke) { c.strokes = solid(vr.stroke); c.strokeWeight = d(vr.strokeWidth, 1); }
+        if (vr.opacity != null) c.opacity = vr.opacity;
+
+        var t = figma.createText();
+        t.fontName = { family: "Inter", style: WMAP[vr.fontWeight] || "Medium" };
+        t.characters = vr.label || "\u30DC\u30BF\u30F3";
+        t.fontSize = d(vr.fontSize, 14);
+        if (vr.textColor) t.fills = solid(vr.textColor);
+        c.appendChild(t);
+
+        c.name = Object.keys(vr.props).map(function(k) { return k + "=" + vr.props[k]; }).join(", ");
+        newNodes.push(c);
+      }
+
+      // 既存のバリアントを取得
+      var existingComponents = [];
+      for (var j = 0; j < cs.children.length; j++) {
+        if (cs.children[j].type === "COMPONENT") existingComponents.push(cs.children[j]);
+      }
+
+      // 既存 + 新規で再結合
+      var allComponents = existingComponents.concat(newNodes);
+      var newCs = figma.combineAsVariants(allComponents, cs.parent);
+      newCs.name = cs.name;
+      newCs.x = cs.x;
+      newCs.y = cs.y;
+
+      // Auto Layout
+      newCs.layoutMode = "VERTICAL";
+      newCs.counterAxisSizingMode = "AUTO";
+      newCs.primaryAxisSizingMode = "AUTO";
+      newCs.itemSpacing = 16;
+      newCs.paddingTop = newCs.paddingBottom = 24;
+      newCs.paddingLeft = newCs.paddingRight = 24;
+
+      // 元の ComponentSet を削除（中身は移動済み）
+      try { cs.remove(); } catch(e) {}
+
+      undoStack.push({ collections: [], variables: [], nodes: [newCs.id], renames: [] });
+      figma.currentPage.selection = [newCs];
+      figma.viewport.scrollAndZoomIntoView([newCs]);
+      figma.ui.postMessage({ type: "done", undoCount: undoStack.length, summary: newNodes.length + " variants added" });
+      figma.notify("\u2713 " + newNodes.length + " \u30D0\u30EA\u30A2\u30F3\u30C8\u3092\u8FFD\u52A0");
+    }).catch(function(e) {
+      figma.ui.postMessage({ type: "error", error: e.message || String(e) });
+    });
+  }
 
   // ── Generate: AI生成 ──
   if (msg.type === "generate") {
