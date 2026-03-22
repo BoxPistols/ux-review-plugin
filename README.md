@@ -1,130 +1,79 @@
 # UX Review AI — Figma Plugin
 
-Figma 上のデザインを AI でレビューし、デザイントークンや UI コンポーネントを自然言語から生成する統合プラグインです。
+Figma 上のデザインを AI でレビューするプラグインです。情報設計・ビジュアル・デザインシステム・実装引継ぎの4つの観点から分析し、デザイナーとエンジニア間の手戻りを削減します。
 
-## 機能
+## 特徴
 
-| タブ | 機能 |
-|---|---|
-| **Review** | 選択フレームを AI 分析 → スコア + 指摘（CRITICAL/WARNING/GOOD） |
-| **Generate** | 自然言語 → Variables / Component Variants / Auto Layout フレーム生成 |
-| **Tokens** | W3C Design Tokens JSON → Figma Variables 一括インポート |
-| **Manage** | Variable Collections の一覧・削除・Undo |
+- **4つのレビュー観点**: 情報設計 / ビジュアル / デザインシステム / 実装引継ぎ
+- **指摘クリックでハイライト**: Figma 上の該当ノードを選択・ズーム
+- **セベリティ別グルーピング**: CRITICAL / WARNING / GOOD
+- **個別コピー**: 各指摘を個別にクリップボード
+- **チャット**: レビュー結果について対話的に深掘り
+- **レビュー履歴**: 自動保存、展開表示、個別削除（最大20件）
+- **Markdown 出力**: 全文コピー / .md ダウンロード
+- **ライト/ダークテーマ**: 切替対応
 
 ## セットアップ
 
-### 1. リポジトリをクローン
+### 1. クローン
 
 ```bash
 git clone https://github.com/BoxPistols/ux-review-plugin.git
 ```
 
-### 2. Figma デスクトップアプリでプラグインを読み込む
+### 2. Figma で読み込み
 
 1. Figma デスクトップアプリを開く
-2. 任意のファイルを開く
-3. メニュー: **Plugins → Development → Import plugin from manifest...**
-4. クローンしたフォルダ内の `manifest.json` を選択
+2. **Plugins → Development → Import plugin from manifest...**
+3. `manifest.json` を選択
 
-### 3. プラグインを起動
+### 3. API キー設定
 
-**Plugins → Development → UX Review AI**
+プラグイン右上の **⚙** → Model 選択 → API Key 入力 → **テスト**
 
-### 4. API キーを設定
-
-1. プラグイン右上の **⚙（設定）** をクリック
-2. **Model** を選択:
-   - `Gemini 2.5 Flash` — 無料（Google AI Studio で API キー発行）
-   - `gpt-5.4-nano` — 高速・低コスト（OpenAI）
-   - `gpt-5.4-mini` — 高精度（OpenAI）
-3. **API Key** を入力
-4. **テスト** ボタンで接続確認
-
-#### API キーの取得方法
-
-**Gemini（無料）:**
-1. [Google AI Studio](https://aistudio.google.com/apikey) にアクセス
-2. 「API キーを作成」をクリック
-3. 発行されたキーをプラグインに貼り付け
-
-**OpenAI:**
-1. [OpenAI Platform](https://platform.openai.com/api-keys) にアクセス
-2. 「Create new secret key」をクリック
-3. 発行されたキー（`sk-...`）をプラグインに貼り付け
+| モデル | 取得先 |
+|---|---|
+| Gemini 2.5 Flash（無料） | [Google AI Studio](https://aistudio.google.com/apikey) |
+| gpt-5.4-nano | [OpenAI Platform](https://platform.openai.com/api-keys) |
+| gpt-5.4-mini | [OpenAI Platform](https://platform.openai.com/api-keys) |
 
 ## 使い方
 
-### Review タブ — デザインレビュー
+### Review タブ
 
-1. Figma キャンバスでレビューしたい**フレームを選択**
-2. **Review** ボタンをクリック
-3. AI がスコア（1-100）と指摘を生成:
-   - **CRITICAL**: 即対応が必要
-   - **WARNING**: 改善推奨
-   - **GOOD**: 良い点
-4. 指摘項目をクリック → Figma 上の該当ノードがハイライト
-5. レビュー結果は**履歴に自動保存**（最大 20 件）
+1. Figma でフレームを選択
+2. レビュー観点を選択（情報設計 / ビジュアル / デザインシステム / 実装引継ぎ）
+3. **Review** ボタンをクリック
 
-**レビュー観点の優先度:**
-- ユーザー目的達成・情報設計・CTA・導線
-- 画面構造・コンポーネント選定
-- ビジュアル品質（タイポグラフィ・スペーシング）
+**レビュー結果:**
+- スコア（1-100）
+- 現状分析 / 改善提案
+- CRITICAL → WARNING → GOOD のグルーピング
+- 各指摘に個別 Copy ボタン
+- 指摘クリックで Figma 上の該当ノードをハイライト
 
-### Generate タブ — AI で UI を生成
+**チャット:**
+- レビュー完了後、下部にチャットUI が表示
+- 「この指摘について詳しく」「エンジニアへの伝え方」等を対話的に質問
 
-1. テキストボックスに自然言語で記述:
-   ```
-   ボタンのバリアントセット（Primary/Secondary × S/M/L）
-   SaaS 向けカラートークン
-   カード一覧画面
-   ```
-2. **生成 →** をクリック（または `⌘+Enter`）
-3. プレビューで構造を確認
-4. **確定して生成** → Figma キャンバスに配置
-5. 不要なら **↩ 元に戻す** で削除
+**出力:**
+- **全文コピー**: Markdown 形式でクリップボード
+- **MD ダウンロード**: `.md` ファイルとして保存
 
-**生成可能なもの:**
-- **Variables**: カラー・スペーシング等のデザイントークン
-- **Component Variants**: Auto Layout 付きのバリアント付きコンポーネント
-- **Frames**: Auto Layout で構造化された画面 UI
+### Manage タブ
 
-### Tokens タブ — デザイントークンのインポート
+- Figma Variables の一覧表示
+- プラグイン作成分 / 全体の削除
+- Undo
 
-1. W3C Design Tokens 形式の JSON を貼り付け:
-   ```json
-   {
-     "color": {
-       "primary": { "$type": "color", "$value": "#2563EB" },
-       "surface": { "$type": "color", "$value": "#F8FAFC" }
-     },
-     "spacing": {
-       "sm": { "$type": "number", "$value": 8 },
-       "md": { "$type": "number", "$value": 16 }
-     }
-   }
-   ```
-2. **Import →** をクリック
-3. Figma の Variables パネルにコレクションが作成される
+## レビュー観点
 
-### Manage タブ — 管理
-
-- **更新**: Variable Collections の一覧を更新
-- **プラグイン作成分を削除**: このプラグインで作成した Collections のみ削除
-- **全削除**: ファイル内の全 Collections を削除（手動作成分含む）
-- **↩ 元に戻す / 全 Undo**: 生成操作を巻き戻し
-
-## リサイズ
-
-- 右下のグリップをドラッグしてウィンドウサイズを変更
-- ヘッダーの **⤢** ボタンで拡大/縮小を切り替え
-
-## 対応 AI モデル
-
-| モデル | プロバイダ | 特徴 |
-|---|---|---|
-| Gemini 2.5 Flash | Google | 無料枠あり（20 回/24h） |
-| gpt-5.4-nano | OpenAI | 高速・低コスト |
-| gpt-5.4-mini | OpenAI | 高精度・推論強化 |
+| 観点 | フォーカス |
+|---|---|
+| **情報設計** | タスク完遂フロー、状態設計（空/エラー/ローディング）、意思決定支援 |
+| **ビジュアル** | タイポグラフィ階層、カラー一貫性、スペーシングのリズム |
+| **デザインシステム** | 命名規則、バリアント網羅性、ガイドライン記載品質 |
+| **実装引継ぎ** | インタラクション明示、API接続点、状態遷移図 |
 
 ## ファイル構成
 
@@ -132,15 +81,14 @@ git clone https://github.com/BoxPistols/ux-review-plugin.git
 ux-review-plugin/
 ├── manifest.json      # Figma プラグイン設定
 ├── dist/
-│   ├── code.js        # プラグインバックエンド（Figma API 操作）
-│   └── ui.html        # プラグイン UI（4 タブ）
-└── ux-proxy/          # Cloudflare Workers プロキシ（オプション）
+│   ├── code.js        # バックエンド（Figma API 操作）
+│   └── ui.html        # フロントエンド（2タブ: Review / Manage）
+└── README.md
 ```
 
 ## 技術仕様
 
-- **Figma Plugin API**: Variables, Components, Auto Layout, Selection 監視
 - **JavaScript**: ES2017 互換（Figma ランタイム制約）
-- **AI API**: Gemini / OpenAI の直接呼び出し（プラグイン UI 内で fetch）
-- **デザイン基準**: Material Design 3
-- **永続化**: Figma `clientStorage`（API キー・レビュー履歴）
+- **AI**: Gemini / OpenAI 直接呼び出し
+- **永続化**: Figma `clientStorage`
+- **フォント**: Noto Sans JP

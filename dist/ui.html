@@ -639,34 +639,10 @@ window.onmessage = function(event) {
     addLog('reviewLog', 'error', msg.error)
   }
 
-  // Generate
-  if (msg.type === 'done') {
-    addLog('genLog', 'ok', '✓ ' + (msg.summary || '生成完了'))
-    if (msg.undoCount > 0) show($('actUndo'))
-  }
-  if (msg.type === 'error') {
-    addLog('genLog', 'error', msg.error)
-  }
-
-  // Generate history
-  if (msg.type === 'gen-history') { renderGenHistory(msg.history || []) }
-
-  // Tokens
-  if (msg.type === 'import-done') {
-    hide($('statusTokens'))
-    addLog('tokenLog', 'ok', '✓ ' + msg.collections + ' collections, ' + msg.variables + ' variables')
-    if (msg.undoCount > 0) show($('actUndo'))
-    parent.postMessage({ pluginMessage: { type: 'list-collections' } }, '*')
-  }
-  if (msg.type === 'import-error') {
-    hide($('statusTokens'))
-    addLog('tokenLog', 'error', msg.error)
-  }
-
   // Manage
   if (msg.type === 'collections-list') { renderCollections(msg.collections) }
   if (msg.type === 'clear-done') {
-    addLog('genLog', 'ok', '✓ ' + msg.count + '件削除')
+    addLog('reviewLog', 'ok', '✓ ' + msg.count + '件削除')
     parent.postMessage({ pluginMessage: { type: 'list-collections' } }, '*')
   }
 
@@ -679,30 +655,6 @@ window.onmessage = function(event) {
 
 // ══════════════════════════════════════════════════════════════
 // システムプロンプト（Material Design 3準拠）
-// ══════════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════
-// AI API呼び出し
-// ══════════════════════════════════════════════════════════════
-function callAI(prompt) {
-  var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
-  if (!apiKey) return Promise.reject(new Error('APIキーを設定してください'))
-  var p
-  if (isGemini(model)) {
-    p = fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ system_instruction:{parts:[{text:SYSTEM_PROMPT}]}, contents:[{parts:[{text:prompt}]}], generationConfig:{response_mime_type:'application/json',temperature:0.7} })
-    }).then(function(r) { if(!r.ok) { if(r.status===429) throw new Error('レート制限に達しました。設定からOpenAIモデルに切り替えるか、しばらく待ってください'); return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'Gemini error '+r.status)}) } return r.json() })
-     .then(function(d) { return d.candidates[0].content.parts[0].text })
-  } else {
-    p = fetch('https://api.openai.com/v1/chat/completions', {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-      body:JSON.stringify({ model:model, messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:prompt}], response_format:{type:'json_object'}, max_completion_tokens:8000 })
-    }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'OpenAI error')}); return r.json() })
-     .then(function(d) { return d.choices[0].message.content })
-  }
-  return p.then(function(c) { if(!c) throw new Error('空の応答'); try{return JSON.parse(c)}catch(e){ var m=c.match(/```(?:json)?\s*([\s\S]*?)\s*```/); if(m)return JSON.parse(m[1]); throw new Error('JSON解析失敗') } })
-}
-
 
 // ══════════════════════════════════════════════════════════════
 // Review: ノード→テキスト変換
@@ -1040,10 +992,6 @@ $('reviewPreview').addEventListener('click', function(e) {
     parent.postMessage({ pluginMessage: { type: 'highlight-node', nodeName: item.getAttribute('data-target') } }, '*')
   }
 })
-$('btnRun').addEventListener('click', doGenerate)
-$('btnConfirm').addEventListener('click', doConfirm)
-$('btnCancel').addEventListener('click', doCancel)
-$('btnImport').addEventListener('click', doImportTokens)
 $('btnUndo').addEventListener('click', function() {
   if (confirm('直前の操作を元に戻しますか？（ComponentSetへのバリアント追加の場合、セット全体が削除されます）')) {
     parent.postMessage({ pluginMessage: { type: 'undo' } }, '*')
