@@ -259,6 +259,9 @@ html, body {
 }
 .chat-send:hover { opacity: 0.88; }
 
+/* ── Review actions ── */
+.review-actions { display: flex; gap: 8px; flex-shrink: 0; padding: 4px 0; }
+
 /* ── Copy button (per section) ── */
 .copy-btn {
   background: none; border: 1px solid var(--border); border-radius: 4px;
@@ -450,7 +453,7 @@ html, body {
         <div>フレームを選択して Review & Improve</div>
       </div>
       <div class="hidden" id="reviewPreview"></div>
-      <div class="hidden" id="reviewActions" style="display:flex;gap:8px;flex-shrink:0;padding:4px 0">
+      <div class="review-actions hidden" id="reviewActions">
         <button class="btn btn-secondary" style="flex:1;padding:6px 14px;font-size:12px;font-weight:500" id="btnCopyReview">全文コピー</button>
         <button class="btn btn-secondary" style="flex:1;padding:6px 14px;font-size:12px;font-weight:500" id="btnDlReview">MDダウンロード</button>
       </div>
@@ -993,7 +996,7 @@ $('reviewPreview').addEventListener('click', function(e) {
   }
 })
 $('btnUndo').addEventListener('click', function() {
-  if (confirm('直前の操作を元に戻しますか？（ComponentSetへのバリアント追加の場合、セット全体が削除されます）')) {
+  if (confirm('直前の操作を元に戻しますか？')) {
     parent.postMessage({ pluginMessage: { type: 'undo' } }, '*')
   }
 })
@@ -1084,7 +1087,7 @@ function sendChat() {
     chatHistory.push({ role: 'assistant', content: reply })
     var aiDiv = document.createElement('div')
     aiDiv.className = 'chat-msg ai'
-    aiDiv.textContent = reply
+    aiDiv.innerHTML = esc(reply).replace(/\n/g, '<br>')
     $('chatMessages').appendChild(aiDiv)
     $('chatMessages').scrollTop = $('chatMessages').scrollHeight
   }).catch(function(e) {
