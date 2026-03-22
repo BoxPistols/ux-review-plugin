@@ -293,7 +293,9 @@ figma.ui.onmessage = function(msg) {
       figma.clientStorage.getAsync("api_key"),
       figma.clientStorage.getAsync("model"),
     ]).then(function(r) {
-      figma.ui.postMessage({ type: "settings-loaded", apiKey: r[0] || "", model: r[1] || "gemini-2.5-flash" });
+      var locale = "ja";
+      try { if (figma.currentUser && figma.currentUser.locale) locale = figma.currentUser.locale; } catch(e) {}
+      figma.ui.postMessage({ type: "settings-loaded", apiKey: r[0] || "", model: r[1] || "gemini-2.5-flash", locale: locale });
     });
     // 初回選択通知
     notifySelection();

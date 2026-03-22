@@ -538,6 +538,7 @@ var currentReview = null
 var selectedNodes = []
 var selectedComponentSet = null
 var reviewLoading = false
+var userLocale = 'ja'
 var reviewMode = 'ia'
 
 // レビュー観点チップ
@@ -594,9 +595,9 @@ window.onmessage = function(event) {
   if (msg.type === 'settings-loaded') {
     if (msg.apiKey) $('apiKey').value = msg.apiKey
     if (msg.model) $('modelSelect').value = msg.model
+    if (msg.locale) userLocale = msg.locale
     if (msg.apiKey) hide($('settings'))
     updateBottomBar()
-    // 履歴読み込み
     parent.postMessage({ pluginMessage: { type: 'load-review-history' } }, '*')
   }
   if (msg.type === 'review-history') {
@@ -756,7 +757,10 @@ function doReviewImprove() {
   var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
   if (!apiKey) { reviewLoading = false; updateBottomBar(); $('btnReview').disabled = false; addLog('reviewLog','error','APIキーを設定してください'); return }
 
-  var fullPrompt = REVIEW_PROMPT + (REVIEW_MODE_PROMPTS[reviewMode] || '')
+  var langSuffix = (userLocale.indexOf('ja') === 0)
+    ? '\n\n出力言語: 日本語'
+    : '\n\nOutput language: English. All messages, categories and suggestions must be in English.'
+  var fullPrompt = REVIEW_PROMPT + (REVIEW_MODE_PROMPTS[reviewMode] || '') + langSuffix
 
   var p
   if (isGemini(model)) {
