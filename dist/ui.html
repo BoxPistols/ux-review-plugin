@@ -117,30 +117,8 @@ html, body {
 .test-result.error { color: var(--red); }
 
 /* ── Tabs ── */
-.tabs {
-  display: flex; flex-shrink: 0; padding: 0 12px;
-  border-bottom: 1px solid var(--border); background: var(--bg);
-  position: relative;
-}
-.tab {
-  flex: 1; padding: 10px 4px 8px; text-align: center;
-  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
-  color: var(--text-dim); cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.25s var(--ease); user-select: none;
-  position: relative;
-}
-.tab:hover { color: var(--text-sub); }
-.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.tab.active::after {
-  content: ''; position: absolute; bottom: -1px; left: 20%; right: 20%;
-  height: 2px; background: var(--accent); filter: blur(4px); opacity: 0.6;
-}
-
-/* ── Tab panels ── */
-.tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
-.tab-panel.active { display: flex; animation: fadeIn 0.2s var(--ease); }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+/* ── Main panel ── */
+.main-panel { display: flex; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
 
 /* ── Common ── */
 .panel-body {
@@ -246,18 +224,47 @@ html, body {
 .chat-msg { font-size: 13px; line-height: 1.85; padding: 10px 14px; border-radius: 12px; max-width: 88%; letter-spacing: 0.02em; }
 .chat-msg.user { background: var(--accent-soft); color: var(--text); align-self: flex-end; border-bottom-right-radius: 4px; }
 .chat-msg.ai { background: var(--surface); color: var(--text-sub); align-self: flex-start; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-.chat-input-row { display: flex; gap: 8px; margin-top: 8px; }
+.chat-input-row { display: flex; gap: 8px; margin-top: 8px; align-items: flex-end; }
 .chat-input {
   flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
   padding: 8px 12px; font-size: 13px; color: var(--text); outline: none; font-family: var(--font);
+  resize: vertical; min-height: 40px; max-height: 120px; line-height: 1.6;
 }
 .chat-input:focus { border-color: var(--accent); }
 .chat-input::placeholder { color: var(--text-dim); }
+.chat-hint { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
 .chat-send {
   padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: 8px;
   font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font); white-space: nowrap;
+  min-height: 40px;
 }
 .chat-send:hover { opacity: 0.88; }
+
+/* ── Review context ── */
+.review-context { padding: 0 0 8px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.review-context summary {
+  font-size: 12px; color: var(--text-sub); cursor: pointer; user-select: none; padding: 4px 0;
+}
+.review-context summary:hover { color: var(--text); }
+.review-context-body { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
+.ctx-label { font-size: 11px; color: var(--text-dim); font-weight: 500; }
+.ctx-textarea {
+  width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 10px; font-size: 12px; color: var(--text); outline: none; font-family: var(--font);
+  resize: vertical; min-height: 36px; max-height: 80px; line-height: 1.5;
+}
+.ctx-textarea:focus { border-color: var(--accent); }
+.ctx-textarea::placeholder { color: var(--text-dim); }
+
+/* ── Image paste preview ── */
+.img-preview-wrap { position: relative; display: inline-block; margin-top: 4px; }
+.img-preview { max-width: 100%; max-height: 120px; border-radius: 6px; border: 1px solid var(--border); }
+.img-remove {
+  position: absolute; top: -6px; right: -6px; width: 20px; height: 20px;
+  background: var(--red); color: #fff; border: none; border-radius: 50%;
+  font-size: 12px; line-height: 20px; text-align: center; cursor: pointer;
+}
+.paste-hint { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
 
 /* ── Review actions ── */
 .review-actions { display: flex; gap: 8px; flex-shrink: 0; padding: 4px 0; }
@@ -368,17 +375,21 @@ html, body {
 
 /* ── Resize grips ── */
 .resize-edge {
-  position: fixed; top: 0; width: 6px; height: 100%; z-index: 200;
-  cursor: ew-resize; opacity: 0;
+  position: fixed; z-index: 200; opacity: 0;
 }
 .resize-edge:hover { opacity: 1; background: var(--accent); }
-.resize-edge.left { left: 0; }
-.resize-edge.right { right: 0; }
-.resize-bottom {
-  position: fixed; bottom: 0; left: 0; width: 100%; height: 6px; z-index: 200;
-  cursor: ns-resize; opacity: 0;
+.resize-edge.left   { top: 8px; left: 0; width: 5px; height: calc(100% - 16px); cursor: ew-resize; }
+.resize-edge.right  { top: 8px; right: 0; width: 5px; height: calc(100% - 16px); cursor: ew-resize; }
+.resize-edge.top    { top: 0; left: 8px; width: calc(100% - 16px); height: 5px; cursor: ns-resize; }
+.resize-edge.bottom { bottom: 0; left: 8px; width: calc(100% - 16px); height: 5px; cursor: ns-resize; }
+.resize-corner {
+  position: fixed; width: 12px; height: 12px; z-index: 201; opacity: 0;
 }
-.resize-bottom:hover { opacity: 1; background: var(--accent); }
+.resize-corner:hover { opacity: 1; background: var(--accent); border-radius: 2px; }
+.resize-corner.tl { top: 0; left: 0; cursor: nwse-resize; }
+.resize-corner.tr { top: 0; right: 0; cursor: nesw-resize; }
+.resize-corner.bl { bottom: 0; left: 0; cursor: nesw-resize; }
+.resize-corner.br { bottom: 0; right: 0; cursor: nwse-resize; }
 
 .hidden { display: none !important; }
 </style>
@@ -387,7 +398,12 @@ html, body {
 
 <div class="resize-edge left" id="resizeL"></div>
 <div class="resize-edge right" id="resizeR"></div>
-<div class="resize-bottom" id="resizeB"></div>
+<div class="resize-edge top" id="resizeT"></div>
+<div class="resize-edge bottom" id="resizeB"></div>
+<div class="resize-corner tl" id="resizeTL"></div>
+<div class="resize-corner tr" id="resizeTR"></div>
+<div class="resize-corner bl" id="resizeBL"></div>
+<div class="resize-corner br" id="resizeBR"></div>
 <div class="layout">
   <!-- Header -->
   <div class="header">
@@ -428,14 +444,9 @@ html, body {
     </div>
   </div>
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <div class="tab active" data-panel="review">Review</div>
-    <div class="tab" data-panel="manage">Manage</div>
-  </div>
 
   <!-- ═══ REVIEW TAB ═══ -->
-  <div class="tab-panel active" id="panel-review">
+  <div class="main-panel" id="panel-review">
     <div class="sel-bar">
       <div class="sel-dot" id="selDot"></div>
       <span class="sel-name" id="selName">フレームを選択してください</span>
@@ -447,10 +458,19 @@ html, body {
       <span class="r-chip" data-mode="system">デザインシステム</span>
       <span class="r-chip" data-mode="handoff">実装引継ぎ</span>
     </div>
+    <!-- ユーザーストーリー -->
+    <div class="review-context">
+      <div class="ctx-label" style="padding:0 16px">この画面でユーザーは何をしますか？</div>
+      <div style="padding:0 16px 8px">
+        <textarea class="ctx-textarea" id="ctxNote" rows="2" placeholder="例: ドローン飛行前のチェック項目を順番に確認し、全て完了したら飛行を開始する"></textarea>
+        <div id="ctxImgPreview"></div>
+        <div class="paste-hint">Cmd+V でスクリーンショット貼り付け可 / 空欄でもレビュー可能</div>
+      </div>
+    </div>
     <div class="panel-body">
       <div class="empty-state" id="reviewEmpty">
         <div class="empty-icon">✦</div>
-        <div>フレームを選択して Review & Improve</div>
+        <div>フレームを選択して Review</div>
       </div>
       <div class="hidden" id="reviewPreview"></div>
       <div class="review-actions hidden" id="reviewActions">
@@ -466,33 +486,17 @@ html, body {
       </div>
       <!-- チャット -->
       <div class="hidden chat-section" id="chatSection">
-        <div class="section-title">チャット — レビュー内容について質問</div>
+        <div class="section-title">深掘り — レビュー結果をさらに掘り下げる</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">上のレビュー結果について質問できます。回答はレビューの文脈を踏まえて生成されます。</div>
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-row">
-          <input class="chat-input" id="chatInput" placeholder="この指摘について詳しく / エンジニアへの伝え方 / 代替案は？" />
+          <textarea class="chat-input" id="chatInput" rows="2" placeholder="例: この指摘をエンジニアにどう伝える？ / この部分の改善案を具体的に / 優先度が高い順に並べて"></textarea>
           <button class="chat-send" id="btnChat">送信</button>
         </div>
+        <div id="chatImgPreview"></div>
+        <div class="chat-hint">Cmd+Enter で送信 / Enter で改行 / Cmd+V で画像貼り付け</div>
       </div>
       <div class="log" id="reviewLog"></div>
-    </div>
-  </div>
-
-  <!-- ═══ MANAGE TAB ═══ -->
-  <div class="tab-panel" id="panel-manage">
-    <div class="panel-body">
-      <div class="section-title">Figma Variables（バリアブルパネルの内容）</div>
-      <div id="collectionsList">
-        <div class="empty-state" style="padding:16px"><div>Variables 未作成</div></div>
-      </div>
-      <div class="section-title" style="margin-top:8px">Variables の管理</div>
-      <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Generate や Tokens で作成した Variables をここで管理します</div>
-      <div class="btn-row">
-        <button class="btn btn-secondary" id="btnRefresh" style="font-weight:400;font-size:12px">一覧を更新</button>
-        <button class="btn btn-danger" id="btnClearPlugin" style="font-weight:400;font-size:12px">このプラグインで作成した分を削除</button>
-      </div>
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn btn-secondary" id="btnClearAll" style="font-weight:400;font-size:12px;color:var(--red);opacity:0.7">全 Variables を削除（手動作成分含む）</button>
-      </div>
     </div>
   </div>
 
@@ -520,20 +524,7 @@ function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').repl
 
 var currentTab = 'review'
 
-// ══════════════════════════════════════════════════════════════
-// タブ切替
-// ══════════════════════════════════════════════════════════════
-function switchTab(name) {
-  currentTab = name
-  document.querySelectorAll('.tab').forEach(function(t) { t.classList.toggle('active', t.getAttribute('data-panel') === name) })
-  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.toggle('active', p.id === 'panel-' + name) })
-  updateBottomBar()
-  if (name === 'manage') parent.postMessage({ pluginMessage: { type: 'list-collections' } }, '*')
-}
-document.querySelectorAll('.tab').forEach(function(t) {
-  t.addEventListener('click', function() { switchTab(t.getAttribute('data-panel')) })
-})
-
+var currentTab = 'review'
 var currentReview = null
 var selectedNodes = []
 var selectedComponentSet = null
@@ -613,9 +604,14 @@ window.onmessage = function(event) {
     if (selectedComponentSet) {
       $('selName').textContent = '◆ ' + selectedComponentSet.name + ' (' + selectedComponentSet.variantCount + ' variants)'
     } else {
-      $('selName').textContent = msg.isMulti ? msg.nodes.length + 'フレームを選択中' : n.name
+      if (msg.isMulti) {
+        var names = msg.nodes.slice(0, 3).map(function(nd) { return nd.name })
+        $('selName').textContent = names.join(' / ') + (msg.nodes.length > 3 ? ' +' + (msg.nodes.length - 3) : '')
+      } else {
+        $('selName').textContent = n.name
+      }
     }
-    $('selMeta').textContent = n.width ? n.width + '×' + n.height : ''
+    $('selMeta').textContent = msg.isMulti ? msg.nodes.length + '件選択' : (n.width ? n.width + '×' + n.height : '')
     updateBottomBar()
   }
   if (msg.type === 'selection-cleared') {
@@ -643,17 +639,15 @@ window.onmessage = function(event) {
     addLog('reviewLog', 'error', msg.error)
   }
 
-  // Manage
-  if (msg.type === 'collections-list') { renderCollections(msg.collections) }
-  if (msg.type === 'clear-done') {
-    addLog('reviewLog', 'ok', '✓ ' + msg.count + '件削除')
-    parent.postMessage({ pluginMessage: { type: 'list-collections' } }, '*')
-  }
-
   // Undo
   if (msg.type === 'undo-done') {
     if (msg.undoCount > 0) show($('actUndo')); else hide($('actUndo'))
-    if (currentTab === 'manage') parent.postMessage({ pluginMessage: { type: 'list-collections' } }, '*')
+  }
+
+  // Static Checks → AI レビューへ続行
+  if (msg.type === 'static-check-results') {
+    pendingStaticFindings = msg.findings || []
+    proceedWithAIReview(pendingStaticFindings)
   }
 }
 
@@ -669,7 +663,20 @@ function nodeToText(n, depth) {
   var s = ind + '[' + n.type + '] ' + n.name
   if (n.componentName) s += ' (Component: ' + n.componentName + ')'
   if (n.width) s += ' ' + n.width + 'x' + n.height + 'px'
+  // レイアウト情報
+  if (n.layout) s += ' [layout:' + n.layout + (n.gap != null ? ' gap:' + n.gap : '') + ']'
+  if (n.hidden) s += ' [hidden]'
+  if (n.opacity != null && n.opacity < 1) s += ' [opacity:' + n.opacity + ']'
+  if (n.fill) s += ' [fill:' + n.fill + ']'
+  if (n.clickable) s += ' [clickable]'
+  if (n.connector) s += ' [connector-line]'
+  // 子要素サマリー
+  if (n.children && n.children.length > 0) s += ' [children:' + n.children.length + ']'
   s += '\n'
+  // パターンヒント
+  if (n.hints && n.hints.length) {
+    for (var h = 0; h < n.hints.length; h++) s += ind + '  ⚑ ' + n.hints[h] + '\n'
+  }
   if (n.texts && n.texts.length) {
     for (var i = 0; i < Math.min(n.texts.length, 5); i++) s += ind + '  "' + n.texts[i] + '"\n'
   }
@@ -678,60 +685,81 @@ function nodeToText(n, depth) {
 }
 
 var REVIEW_PROMPT = [
-'あなたはB2B業務システムに精通したシニアUXレビュアーです。',
+'あなたはUI/UXデザインの専門家です。',
 '以下のFigmaフレーム構造を分析し、日本語でレビューしてください。',
 '',
-'【あなたの役割】',
-'デザイナーが作成したワイヤーフレームを、エンジニアへの実装指示書として成立するレベルに引き上げることです。',
-'px値やコントラスト比の指摘ではなく、「ここを改善すればエンジニアが迷わず実装できる」「ここが曖昧だと手戻りが発生する」という観点で指摘してください。',
+'━━━ あなたの専門性 ━━━',
+'',
+'あなたは以下の知識を統合してレビューする:',
+'- 人間工学: 身体特性（視力、手の大きさ）、認知特性（注意、記憶、判断）、利用環境（デスクトップ/モバイル/屋外）',
+'- UX原則: Nielsen 10原則、Norman のアフォーダンス/シグニファイア/概念モデル、Fitts/Hick/Gestalt 法則',
+'- アクセシビリティ: WCAG、キーボード操作、スクリーンリーダー対応、色覚多様性',
+'- 情報設計: ユーザーフロー、情報階層、ナビゲーション構造',
+'- UIパターン: あらゆるWebの標準UIコンポーネントとその正しい使い方・よくある誤用',
+'',
+'作り手はUIの専門家ではなく業務領域の専門家であることが多い。',
+'Webの操作慣習（戻る、取り消し、進捗表示、フィードバック等）が暗黙知のまま設計に反映されないことがある。',
+'あなたの役割は、その暗黙知を具体的な指摘として明示することである。',
+'',
+'━━━ 分析手順 ━━━',
+'',
+'■ Step 1: 画面の理解',
+'ノード構造・テキスト内容・構造ヒント（⚑マーク）・画像（添付時）から:',
+'(a) この画面にどんなUIコンポーネントが使われているか識別する',
+'(b) このUIが提供しようとしている体験（ユーザーの目的）を推測する',
+'(c) 複数フレームの場合、それらの関係（遷移/親子/状態違い/並列）を推測する',
+'',
+'構造的シグナルの読み方:',
+'- ⚑マーク: 繰り返し構造、接続線、色差、opacity差、クリック設定の検出結果',
+'- [layout:VERTICAL/HORIZONTAL]: Auto Layout の方向',
+'- [fill:色] [opacity:値]: 視覚的な状態区別',
+'- [clickable]: インタラクション設定あり',
+'- [connector-line]: 子要素間の接続線（進行フローの手がかり）',
+'',
+'■ Step 2: 内部推論（出力には含めない）',
+'識別したコンポーネントごとに:',
+'- そのコンポーネントがWebで一般的にどう振る舞うべきか（標準の期待値）',
+'- この画面での使い方が標準から逸脱していないか',
+'- ユーザーの目的達成に対して、このコンポーネント選択は最適か',
+'- 事業目的（導入率、継続率、サポートコスト、手戻り防止）への影響',
+'',
+'■ Step 3: レビュー',
+'以下の優先度で指摘する:',
+'',
+'【Critical: ユーザーが目的を達成できない】',
+'- フロー上のデッドエンド、データ破壊リスク、確認のない不可逆操作',
+'- 現在の状態がわからない、次にすべきことがわからない',
+'- コンポーネントの重大な誤用（本来の振る舞いから大きく逸脱）',
+'- バリデーション不足、フィードバック不在',
+'',
+'【Warning: 使えるが、迷う・間違える・遅くなる】',
+'- シグニファイアの不足（操作可能な要素が見た目で判別できない）',
+'- 一貫性の欠如（画面間でUIの見た目や用語が不統一）',
+'- 認知負荷が高い（情報過多、段階的開示の不在、Gestalt原則違反）',
+'- 状態定義の欠落（空/ローディング/エラー/ホバー/フォーカス/無効化）',
+'- インタラクション仕様の曖昧さ（操作後に何が起きるか不明）',
+'',
+'【Good: この設計判断は正しい】',
+'- ユーザーの目的に対して適切なコンポーネント選択',
+'- 標準的なUIパターンの正しい活用',
+'- 明確な導線、適切なフィードバック',
 '',
 '出力形式（JSONのみ）:',
-'{"score":1-100,"asIs":"現状分析（3-5文）","toBe":"改善方針（3-5文）",',
+'{"score":1-100,',
+'"pattern":"識別したUIパターン",',
+'"asIs":"現状分析（3-5文。冒頭で識別したパターン名を明記）",',
+'"toBe":"改善方針（3-5文）",',
 '"details":[{"category":"カテゴリ","severity":"critical|warning|good","message":"指摘","target":"ノード名"}]}',
 '',
-'━━━ レビュー観点（この優先度で）━━━',
-'',
-'★★★ タスク完遂フロー',
-'- ユーザーがこの画面で完遂すべきタスクは何か。そのタスクを手を止めず、迷いなく完了できるか',
-'- 現在の状態（何が選択されているか、何が未完了か）が画面上で即座に把握できるか',
-'- 次に何をすべきかが明確か。主要アクションが1つに絞られているか',
-'- 操作の不可逆性に応じた設計になっているか（カジュアル操作 vs 慎重操作）',
-'  例: 削除ボタンの配置 — カジュアル削除なら右側（進行導線）、不可逆な削除なら左側+赤色（摩擦を設ける）',
-'  根拠: グーテンベルク図版（視線は左上→右下）、Apple HIG、Material Design Dialogs',
-'',
-'★★★ 状態設計の完全性',
-'- 以下の状態が設計されているか:',
-'  空状態（データなし）→ 何をすれば表示されるかの案内',
-'  ローディング状態 → 何を待っているかの明示',
-'  エラー状態 → 何が失敗し、どう復旧するかの案内',
-'  部分完了状態 → あと何ステップで完了するかの明示',
-'- 状態ごとの「次アクション」が提示されているか',
-'- これが欠如していると、エンジニアが実装時に自己判断することになり手戻りが発生する',
-'',
-'★★ 情報設計・意思決定支援',
-'- 同じラベル/タイトルが複数箇所で重複していないか → 統合すべき',
-'- 見出し→詳細→操作の情報階層が1つの流れになっているか',
-'- ユーザーが判断に必要な情報が、判断するタイミングで表示されているか',
-'- 補助的な操作（設定変更、フィルタ等）が主要導線と混在していないか',
-'',
-'★ 実装時の手戻り防止ポイント',
-'- このワイヤーフレームだけで、エンジニアが意図通り実装できるか',
-'- ボタンの配置根拠（なぜ右/左/上/下か）が読み取れるか',
-'- インタラクション（ホバー、クリック後の遷移先、モーダル/インラインの選択）が明示されているか',
-'- 「ここをこうすればエンジニアが迷わない」という具体的改善案を示す',
-'',
-'▽ 補足（ビジュアル品質）',
-'- 上記の本質的な指摘の後、補足としてタイポグラフィ階層・スペーシング・カラーに触れてもよい',
-'- ただしpx値の羅列やコントラスト比の計算は不要',
-'',
 '━━━ ルール ━━━',
-'- details は最大6件',
-'- 指摘には必ず「なぜ問題か」「どう直すか」「直さないと何が起きるか（手戻り等）」を含める',
-'- 判断が分かれる設計（例: 削除ボタンの左右）には、両方の選択肢と判断基準を提示する',
-'- UX原則を根拠として引用する（Nielsen 10原則, Gutenberg図版, Fitts法則, Apple HIG, Material Design等）',
-'- severity: critical=エンジニアが実装に困る/ユーザーがタスク完遂できない, warning=改善推奨, good=良い設計判断',
-'- good を必ず1件含める（デザイナーの良い判断を認める）',
-'- message は断定形。200文字以上',
+'- details は最大6件。Critical を優先し、Good を必ず1件含める',
+'- asIs 冒頭で「この画面は〇〇で構成されている」と識別結果を明記',
+'- message の構造（\\n で区切ること）:',
+'  1行目: 指摘の要約（識別したコンポーネント名を含む1文）',
+'  \\n\\nなぜ問題か：1-2文。UX原則名を根拠として添える',
+'  \\n\\nどう直すか：Figma上でどう変更すればよいかの具体案（1-2文）',
+'  \\n\\n直さないと：ユーザーや事業への影響（1文）',
+'- 指摘は必ず具体的に。識別したコンポーネント名/要素名を含めること',
 ].join('\n')
 
 var REVIEW_MODE_PROMPTS = {
@@ -741,44 +769,127 @@ var REVIEW_MODE_PROMPTS = {
   handoff: '\n\n【モード: 実装引継ぎ】\n上記の観点を以下に置き換えてレビューしてください:\n- エンジニアがこの画面を見て、何を実装すればよいか迷わないか\n- インタラクション（クリック後の遷移先、ホバー、フォーカス、無効化）が明示されているか\n- APIとの接続点（データの取得元、更新時の挙動、エラーハンドリング）が読み取れるか\n- レスポンシブ対応（ブレークポイントでの変化）が明示されているか\n- 状態遷移図が必要な箇所に定義されているか\n- コンポーネントの再利用指示（既存コンポーネント名、新規作成の要否）が明確か',
 }
 
+var pendingStaticFindings = []
+var pendingReviewText = ''
+
+// ── 画像ペースト ──
+var ctxImage = null  // { base64: '...', mime: 'image/png' }
+var chatImage = null
+
+function setupImagePaste(textareaId, previewId, setter) {
+  var el = $(textareaId)
+  if (!el) return
+  el.addEventListener('paste', function(e) {
+    var items = (e.clipboardData || {}).items || []
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        e.preventDefault()
+        var file = items[i].getAsFile()
+        var reader = new FileReader()
+        reader.onload = function(ev) {
+          var dataUrl = ev.target.result
+          var parts = dataUrl.split(',')
+          var mime = parts[0].match(/:(.*?);/)[1]
+          var b64 = parts[1]
+          setter({ base64: b64, mime: mime })
+          var wrap = $(previewId)
+          wrap.innerHTML = '<div class="img-preview-wrap"><img class="img-preview" src="' + dataUrl + '"/><button class="img-remove" id="rm_' + previewId + '">×</button></div>'
+          wrap.querySelector('.img-remove').addEventListener('click', function() { setter(null); wrap.innerHTML = '' })
+        }
+        reader.readAsDataURL(file)
+        return
+      }
+    }
+  })
+}
+
+setupImagePaste('ctxNote', 'ctxImgPreview', function(v) { ctxImage = v })
+setupImagePaste('chatInput', 'chatImgPreview', function(v) { chatImage = v })
+
+function collectReviewContext() {
+  var ctx = []
+  var note = ($('ctxNote') && $('ctxNote').value) ? $('ctxNote').value.trim() : ''
+  if (note) ctx.push(note)
+  return ctx.length ? '\n\n━━━ レビュー依頼の前提条件 ━━━\n' + ctx.join('\n') : ''
+}
+
 function doReviewImprove() {
   if (!selectedNodes.length) return
   hide($('reviewEmpty'))
-  reviewLoading = true; $('statusReviewText').textContent = 'AIがデザインを分析中...'; updateBottomBar()
-  $('btnReview').disabled = true
+  reviewLoading = true; $('btnReview').disabled = true
 
-  var text = ''
+  pendingReviewText = ''
+  if (selectedNodes.length > 1) {
+    pendingReviewText += '【複数フレーム選択: ' + selectedNodes.length + '件。フレーム間の関係性も分析してください】\n\n'
+  }
   for (var i = 0; i < selectedNodes.length; i++) {
     var n = selectedNodes[i]
-    text += '## フレーム: ' + n.name + ' (' + n.width + 'x' + n.height + 'px)\n'
-    text += nodeToText(n, 0) + '\n'
+    pendingReviewText += '## フレーム ' + (i + 1) + '/' + selectedNodes.length + ': ' + n.name + ' (' + n.width + 'x' + n.height + 'px)\n'
+    pendingReviewText += nodeToText(n, 0) + '\n'
+  }
+
+  var apiKey = $('apiKey').value.trim()
+  if (!apiKey) { reviewLoading = false; updateBottomBar(); $('btnReview').disabled = false; addLog('reviewLog','error','APIキーを設定してください'); return }
+
+  // handoff / system モードのみ静的チェックを実行
+  if (reviewMode === 'handoff' || reviewMode === 'system') {
+    $('statusReviewText').textContent = '仕様チェック中...'; updateBottomBar()
+    parent.postMessage({ pluginMessage: { type: 'run-static-checks' } }, '*')
+  } else {
+    $('statusReviewText').textContent = 'AIがデザインを分析中...'; updateBottomBar()
+    proceedWithAIReview([])
+  }
+}
+
+function proceedWithAIReview(staticFindings) {
+  $('statusReviewText').textContent = 'AIがデザインを分析中...'
+
+  var text = pendingReviewText
+  // 静的チェック結果があれば AI プロンプトのコンテキストに追加
+  if (staticFindings.length) {
+    text += '\n\n## 静的チェック結果（自動検出済み。重複指摘は不要、より高度な分析に集中してください）\n'
+    for (var s = 0; s < staticFindings.length; s++) {
+      var f = staticFindings[s]
+      text += '- [' + f.category + '] "' + f.target + '": ' + f.message + '\n'
+    }
   }
 
   var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
-  if (!apiKey) { reviewLoading = false; updateBottomBar(); $('btnReview').disabled = false; addLog('reviewLog','error','APIキーを設定してください'); return }
 
   var langSuffix = (userLocale.indexOf('ja') === 0)
     ? '\n\n出力言語: 日本語'
     : '\n\nOutput language: English. All messages, categories and suggestions must be in English.'
-  var fullPrompt = REVIEW_PROMPT + (REVIEW_MODE_PROMPTS[reviewMode] || '') + langSuffix
+  var reviewContext = collectReviewContext()
+  var fullPrompt = REVIEW_PROMPT + reviewContext + (REVIEW_MODE_PROMPTS[reviewMode] || '') + langSuffix
 
+  // マルチモーダル対応: 画像があれば添付
+  var img = ctxImage
   var p
   if (isGemini(model)) {
+    var contentParts = [{text: text}]
+    if (img) contentParts.push({inline_data: {mime_type: img.mime, data: img.base64}})
     p = fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ system_instruction:{parts:[{text:fullPrompt}]}, contents:[{parts:[{text:text}]}], generationConfig:{response_mime_type:'application/json',temperature:0.3} })
+      body:JSON.stringify({ system_instruction:{parts:[{text:fullPrompt}]}, contents:[{parts:contentParts}], generationConfig:{response_mime_type:'application/json',temperature:0.5} })
     }).then(function(r) { if(!r.ok) { if(r.status===429) throw new Error('レート制限。OpenAIに切り替えてください'); return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'Gemini error '+r.status)}) } return r.json() })
      .then(function(d) { return d.candidates[0].content.parts[0].text })
   } else {
+    var userContent = img
+      ? [{type:'text',text:text},{type:'image_url',image_url:{url:'data:'+img.mime+';base64,'+img.base64}}]
+      : text
     p = fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-      body:JSON.stringify({ model:model, messages:[{role:'system',content:fullPrompt},{role:'user',content:text}], response_format:{type:'json_object'}, max_completion_tokens:8000 })
+      body:JSON.stringify({ model:model, messages:[{role:'system',content:fullPrompt},{role:'user',content:userContent}], response_format:{type:'json_object'}, max_completion_tokens:8000 })
     }).then(function(r) { if(!r.ok) return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'OpenAI error')}); return r.json() })
      .then(function(d) { return d.choices[0].message.content })
   }
 
   p.then(function(c) {
     var result = JSON.parse(c)
+    // 静的チェック結果を details の先頭にマージ
+    var aiDetails = (result.details || []).map(function(d) { d.source = 'ai'; return d })
+    var specDetails = (pendingStaticFindings || []).map(function(d) { d.source = 'static'; return d })
+    result.details = specDetails.concat(aiDetails)
     currentReview = result
     renderReviewPreview(result)
     reviewLoading = false; $('btnReview').disabled = false; updateBottomBar()
@@ -825,12 +936,14 @@ function textToParagraphs(text) {
 }
 
 function renderDetailItem(d, idx) {
-  var text = '[' + (d.severity || '').toUpperCase() + '] ' + (d.category || '') + '\n'
+  var sourceTag = d.source === 'static' ? '[SPEC] ' : ''
+  var text = sourceTag + '[' + (d.severity || '').toUpperCase() + '] ' + (d.category || '') + '\n'
   if (d.target) text += '対象: ' + d.target + '\n'
   text += (d.message || '')
 
   var h = '<div class="mod-item" data-target="' + esc(d.target || '') + '">'
   h += '<div class="mod-head">'
+  if (d.source === 'static') h += '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:var(--accent-soft);color:var(--accent);font-weight:600;margin-right:4px;letter-spacing:0.03em">SPEC</span>'
   if (d.target) h += '<span class="mod-target">' + esc(d.target) + '</span>'
   h += '<span class="mod-action">' + esc(d.category || '') + '</span>'
   h += '<button class="copy-btn" data-copy-text="' + esc(text).replace(/\n/g, '&#10;') + '">Copy</button>'
@@ -843,6 +956,11 @@ function renderDetailItem(d, idx) {
 function renderReviewPreview(r) {
   var scoreClass = r.score >= 75 ? 'high' : r.score >= 50 ? 'mid' : 'low'
   var h = '<div class="review-score ' + scoreClass + '">' + r.score + '<span style="font-size:14px;color:var(--text-dim)"> / 100</span></div>'
+
+  // 識別パターン
+  if (r.pattern) {
+    h += '<div style="text-align:center;margin:-4px 0 8px;font-size:12px;color:var(--accent);font-weight:500">' + esc(r.pattern) + '</div>'
+  }
 
   // 現状分析
   h += '<div class="review-block">'
@@ -963,19 +1081,6 @@ $('btnClearHistory').addEventListener('click', function() {
 })
 
 // ══════════════════════════════════════════════════════════════
-// Manage: コレクション一覧
-// ══════════════════════════════════════════════════════════════
-function renderCollections(list) {
-  var el = $('collectionsList')
-  if (!list.length) { el.innerHTML = '<div class="empty-state" style="padding:16px">コレクションなし</div>'; return }
-  var h = ''
-  for (var i=0;i<list.length;i++) {
-    h += '<div class="coll-card"><span class="coll-name">'+list[i].name+'</span><span class="coll-meta">'+list[i].variableCount+' vars'+(list[i].modes>1?' / '+list[i].modes+' modes':'')+'</span></div>'
-  }
-  el.innerHTML = h
-}
-
-// ══════════════════════════════════════════════════════════════
 // 共通: ログ
 // ══════════════════════════════════════════════════════════════
 function addLog(logId, type, message) {
@@ -1009,9 +1114,6 @@ $('btnUndoAll').addEventListener('click', function() {
     parent.postMessage({ pluginMessage: { type: 'undo-all' } }, '*')
   }
 })
-$('btnRefresh').addEventListener('click', function() { parent.postMessage({ pluginMessage: { type: 'list-collections' } }, '*') })
-$('btnClearPlugin').addEventListener('click', function() { if (confirm('プラグインが作成したCollectionsを削除しますか？')) parent.postMessage({ pluginMessage: { type: 'clear-all-collections', onlyPlugin: true } }, '*') })
-$('btnClearAll').addEventListener('click', function() { if (confirm('⚠ ファイル内の全Variable Collectionsを削除します。手動作成分も含まれます。本当に実行しますか？')) parent.postMessage({ pluginMessage: { type: 'clear-all-collections', onlyPlugin: false } }, '*') })
 
 document.addEventListener('keydown', function(e) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -1042,8 +1144,26 @@ var chatHistory = []
 
 function initChat() {
   if (!currentReview) return
+  var reviewSummary = 'スコア: ' + currentReview.score + '/100'
+  if (currentReview.pattern) reviewSummary += '\nパターン: ' + currentReview.pattern
+  reviewSummary += '\n現状分析: ' + (currentReview.asIs || '')
+  reviewSummary += '\n改善提案: ' + (currentReview.toBe || '')
+  reviewSummary += '\n指摘:\n' + ((currentReview.details || []).map(function(d) { return '[' + d.severity + '] ' + d.category + ': ' + d.message }).join('\n'))
+
   chatHistory = [
-    { role: 'system', content: 'あなたはUI/UXデザインの専門家です。以下のレビュー結果について、デザイナーからの質問に日本語で答えてください。具体的な改善案、判断根拠（Nielsen原則、Gutenberg図版等）、エンジニアへの伝え方を含めてください。\n\nレビュー結果:\nスコア: ' + currentReview.score + '/100\n現状分析: ' + (currentReview.asIs || '') + '\n改善提案: ' + (currentReview.toBe || '') + '\n指摘:\n' + ((currentReview.details || []).map(function(d) { return '[' + d.severity + '] ' + d.category + ': ' + d.message }).join('\n')) }
+    { role: 'system', content: [
+      'あなたはUI/UXデザインの専門家です。デザイナーからの質問に日本語で答えてください。',
+      '',
+      '【回答ルール】',
+      '- 質問の大きさに応じて回答量を調整すること',
+      '- 簡単な質問（はい/いいえ、1点の確認）→ 1-3文で簡潔に',
+      '- 具体的な改善依頼 → 5-8文で具体案を提示',
+      '- 「Figma上でどこをどう変えるか」を具体的に書く',
+      '- 長文の箇条書きを安易に使わない',
+      '',
+      '【前のレビュー結果（この会話の文脈）】',
+      reviewSummary,
+    ].join('\n') }
   ]
   $('chatMessages').innerHTML = ''
   show($('chatSection'))
@@ -1051,16 +1171,32 @@ function initChat() {
 
 function sendChat() {
   var text = $('chatInput').value.trim()
-  if (!text) return
+  if (!text && !chatImage) return
   $('chatInput').value = ''
+  var img = chatImage
+  chatImage = null; $('chatImgPreview').innerHTML = ''
+
+  // 選択中ノードの情報を自動付加（全体レビュー後に部分を選択した場合の文脈）
+  var contextPrefix = ''
+  if (selectedNodes.length) {
+    var sel = selectedNodes[0]
+    contextPrefix = '[現在選択中: ' + sel.name + ' (' + sel.width + 'x' + sel.height + 'px)]\n'
+  }
 
   // ユーザーメッセージ表示
   var userDiv = document.createElement('div')
   userDiv.className = 'chat-msg user'
-  userDiv.textContent = text
+  if (img) userDiv.innerHTML = '<img src="data:' + img.mime + ';base64,' + img.base64 + '" style="max-width:100%;max-height:100px;border-radius:4px;margin-bottom:4px;display:block">' + esc(text || '')
+  else userDiv.textContent = text
   $('chatMessages').appendChild(userDiv)
 
-  chatHistory.push({ role: 'user', content: text })
+  // チャット履歴にマルチモーダル対応で追加
+  var fullText = contextPrefix + (text || '')
+  if (img) {
+    chatHistory.push({ role: 'user', content: fullText || '画像を確認してください', _img: img })
+  } else {
+    chatHistory.push({ role: 'user', content: fullText })
+  }
 
   // AI呼び出し
   var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
@@ -1072,7 +1208,9 @@ function sendChat() {
     for (var i = 0; i < chatHistory.length; i++) {
       var ch = chatHistory[i]
       if (ch.role === 'system') continue
-      geminiContents.push({ role: ch.role === 'assistant' ? 'model' : 'user', parts: [{ text: ch.content }] })
+      var parts = [{ text: ch.content || '' }]
+      if (ch._img) parts.push({ inline_data: { mime_type: ch._img.mime, data: ch._img.base64 } })
+      geminiContents.push({ role: ch.role === 'assistant' ? 'model' : 'user', parts: parts })
     }
     p = fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1080,9 +1218,21 @@ function sendChat() {
     }).then(function(r) { if (!r.ok) throw new Error('API error'); return r.json() })
       .then(function(d) { return d.candidates[0].content.parts[0].text })
   } else {
+    var oaiMessages = []
+    for (var j = 0; j < chatHistory.length; j++) {
+      var m = chatHistory[j]
+      if (m._img) {
+        oaiMessages.push({ role: 'user', content: [
+          { type: 'text', text: m.content || '画像を確認してください' },
+          { type: 'image_url', image_url: { url: 'data:' + m._img.mime + ';base64,' + m._img.base64 } }
+        ]})
+      } else {
+        oaiMessages.push({ role: m.role, content: m.content })
+      }
+    }
     p = fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ model: model, messages: chatHistory, max_completion_tokens: 2000 })
+      body: JSON.stringify({ model: model, messages: oaiMessages, max_completion_tokens: text.length < 30 ? 500 : 1500 })
     }).then(function(r) { if (!r.ok) throw new Error('API error'); return r.json() })
       .then(function(d) { return d.choices[0].message.content })
   }
@@ -1101,7 +1251,8 @@ function sendChat() {
 
 $('btnChat').addEventListener('click', sendChat)
 $('chatInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() }
+  // IME変換中（isComposing）は無視。Cmd+Enter or Ctrl+Enter で送信
+  if (e.key === 'Enter' && !e.isComposing && (e.metaKey || e.ctrlKey)) { e.preventDefault(); sendChat() }
 })
 
 // ══════════════════════════════════════════════════════════════
@@ -1125,7 +1276,8 @@ function reviewToMarkdown() {
     md += '## 指摘\n'
     for (var i = 0; i < currentReview.details.length; i++) {
       var d = currentReview.details[i]
-      md += '### ' + (d.severity || '').toUpperCase() + ': ' + (d.category || '') + '\n'
+      var srcTag = d.source === 'static' ? '[SPEC] ' : '[AI] '
+      md += '### ' + srcTag + (d.severity || '').toUpperCase() + ': ' + (d.category || '') + '\n'
       if (d.target) md += '**対象:** ' + d.target + '\n'
       md += (d.message || '') + '\n\n'
     }
@@ -1133,21 +1285,27 @@ function reviewToMarkdown() {
   return md
 }
 
+function copyToClipboard(text, btn, label) {
+  var ta = document.createElement('textarea')
+  ta.value = text
+  ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0.01'
+  document.body.appendChild(ta)
+  ta.focus(); ta.select()
+  try { document.execCommand('copy') } catch(e) {}
+  document.body.removeChild(ta)
+  // clipboard API も試行（成功すれば上書き）
+  try { navigator.clipboard.writeText(text) } catch(e) {}
+  if (btn) {
+    var orig = btn.textContent
+    btn.textContent = '✓ Copied'
+    setTimeout(function() { btn.textContent = label || orig }, 1500)
+  }
+}
+
 $('btnCopyReview').addEventListener('click', function() {
   var md = reviewToMarkdown()
   if (!md) return
-  navigator.clipboard.writeText(md).then(function() {
-    $('btnCopyReview').textContent = '✓ Copied'
-    setTimeout(function() { $('btnCopyReview').textContent = 'Copy' }, 1500)
-  }).catch(function() {
-    // Fallback
-    var ta = document.createElement('textarea')
-    ta.value = md; ta.style.cssText = 'position:fixed;top:-9999px'
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy')
-    document.body.removeChild(ta)
-    $('btnCopyReview').textContent = '✓ Copied'
-    setTimeout(function() { $('btnCopyReview').textContent = 'Copy' }, 1500)
-  })
+  copyToClipboard(md, $('btnCopyReview'), '全文コピー')
 })
 
 $('btnDlReview').addEventListener('click', function() {
@@ -1162,19 +1320,31 @@ $('btnDlReview').addEventListener('click', function() {
   URL.revokeObjectURL(url)
 })
 
-// 端ドラッグリサイズ
+// 四辺+四隅ドラッグリサイズ
 ;(function() {
   var mode = null, sx, sy, sw, sh
   function startDrag(m) { return function(e) { mode = m; sx = e.clientX; sy = e.clientY; sw = window.innerWidth; sh = window.innerHeight; e.preventDefault() } }
   $('resizeL').addEventListener('mousedown', startDrag('l'))
   $('resizeR').addEventListener('mousedown', startDrag('r'))
+  $('resizeT').addEventListener('mousedown', startDrag('t'))
   $('resizeB').addEventListener('mousedown', startDrag('b'))
+  $('resizeTL').addEventListener('mousedown', startDrag('tl'))
+  $('resizeTR').addEventListener('mousedown', startDrag('tr'))
+  $('resizeBL').addEventListener('mousedown', startDrag('bl'))
+  $('resizeBR').addEventListener('mousedown', startDrag('br'))
   window.addEventListener('mousemove', function(e) {
     if (!mode) return
     var dx = e.clientX - sx, dy = e.clientY - sy
-    if (mode === 'r') postResize(Math.max(380, sw + dx), sh)
-    if (mode === 'l') postResize(Math.max(380, sw - dx), sh)
-    if (mode === 'b') postResize(sw, Math.max(400, sh + dy))
+    var w = sw, h = sh
+    if (mode === 'r')  { w = sw + dx }
+    if (mode === 'l')  { w = sw - dx }
+    if (mode === 't')  { h = sh - dy }
+    if (mode === 'b')  { h = sh + dy }
+    if (mode === 'br') { w = sw + dx; h = sh + dy }
+    if (mode === 'bl') { w = sw - dx; h = sh + dy }
+    if (mode === 'tr') { w = sw + dx; h = sh - dy }
+    if (mode === 'tl') { w = sw - dx; h = sh - dy }
+    postResize(Math.max(380, w), Math.max(400, h))
   })
   window.addEventListener('mouseup', function() { mode = null })
 })()

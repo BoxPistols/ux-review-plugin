@@ -1,0 +1,27 @@
+{
+  "name": "ux-review-plugin",
+  "version": "1.0.0",
+  "description": "Figma 上のデザインを AI でレビューするプラグインです。情報設計・ビジュアル・デザインシステム・実装引継ぎの4つの観点から分析し、デザイナーとエンジニア間の手戻りを削減します。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BoxPistols/ux-review-plugin.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/BoxPistols/ux-review-plugin/issues"
+  },
+  "homepage": "https://github.com/BoxPistols/ux-review-plugin#readme",
+  "devDependencies": {
+    "vitest": "^4.1.1"
+  }
+}
