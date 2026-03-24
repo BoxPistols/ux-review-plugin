@@ -462,7 +462,7 @@ html, body {
     <div class="review-context">
       <div class="ctx-label" style="padding:0 16px">この画面でユーザーは何をしますか？</div>
       <div style="padding:0 16px 8px">
-        <textarea class="ctx-textarea" id="ctxNote" rows="2" placeholder="例: ドローン飛行前のチェック項目を順番に確認し、全て完了したら飛行を開始する"></textarea>
+        <textarea class="ctx-textarea" id="ctxNote" rows="2" placeholder="例: 複数の確認項目を順番にチェックし、全て完了したら次の工程に進む"></textarea>
         <div id="ctxImgPreview"></div>
         <div class="paste-hint">Cmd+V でスクリーンショット貼り付け可 / 空欄でもレビュー可能</div>
       </div>
@@ -752,14 +752,28 @@ var REVIEW_PROMPT = [
 '"details":[{"category":"カテゴリ","severity":"critical|warning|good","message":"指摘","target":"ノード名"}]}',
 '',
 '━━━ ルール ━━━',
-'- details は最大6件。Critical を優先し、Good を必ず1件含める',
-'- asIs 冒頭で「この画面は〇〇で構成されている」と識別結果を明記',
-'- message の構造（\\n で区切ること）:',
-'  1行目: 指摘の要約（識別したコンポーネント名を含む1文）',
-'  \\n\\nなぜ問題か：1-2文。UX原則名を根拠として添える',
-'  \\n\\nどう直すか：Figma上でどう変更すればよいかの具体案（1-2文）',
-'  \\n\\n直さないと：ユーザーや事業への影響（1文）',
-'- 指摘は必ず具体的に。識別したコンポーネント名/要素名を含めること',
+'',
+'■ 出力形式',
+'- details は最大5件。Critical 優先、Good を1件含める',
+'- asIs 冒頭で「この画面は〇〇で構成されている」と明記',
+'',
+'■ message の書き方（最重要）',
+'各 message は以下の構造で書く。各セクション間に必ず \\n\\n を入れて改行すること:',
+'',
+'1行目: 指摘の要約。コンポーネント名を含む簡潔な1文',
+'',
+'\\n\\n問題: 1-2文で簡潔に。',
+'',
+'\\n\\nアクション: Figma上で具体的に何をすべきか。1-2文。',
+'',
+'\\n\\n参考: 根拠となるURLを1つ添付（MDN、Material Design、Apple HIG、Nielsen Norman Group、W3C等の公式ドキュメント）',
+'',
+'■ 表現のルール',
+'- 簡潔に書く。1つの指摘は合計100-150字以内を目安',
+'- 毎回「ニールセンの〇〇」と言わない。根拠は参考URLで示す',
+'- 表現にバリエーションを持たせる。毎回同じ定型文にしない',
+'- 「〜してください」「〜を検討してください」のようなアクション促進形で書く',
+'- コンポーネントの使い方（この場面でこのコンポーネントが適切か）も指摘する',
 ].join('\n')
 
 var REVIEW_MODE_PROMPTS = {
@@ -870,7 +884,7 @@ function proceedWithAIReview(staticFindings) {
     if (img) contentParts.push({inline_data: {mime_type: img.mime, data: img.base64}})
     p = fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ system_instruction:{parts:[{text:fullPrompt}]}, contents:[{parts:contentParts}], generationConfig:{response_mime_type:'application/json',temperature:0.5} })
+      body:JSON.stringify({ system_instruction:{parts:[{text:fullPrompt}]}, contents:[{parts:contentParts}], generationConfig:{response_mime_type:'application/json',temperature:0.7} })
     }).then(function(r) { if(!r.ok) { if(r.status===429) throw new Error('レート制限。OpenAIに切り替えてください'); return r.json().then(function(e){throw new Error((e.error&&e.error.message)||'Gemini error '+r.status)}) } return r.json() })
      .then(function(d) { return d.candidates[0].content.parts[0].text })
   } else {
@@ -914,23 +928,19 @@ function proceedWithAIReview(staticFindings) {
 // 文章を句点で分割し段落化
 function textToParagraphs(text) {
   if (!text) return ''
-  // 「なぜ問題か：」「どう直すか：」等のキーワードで改行
   var formatted = esc(text)
-    .replace(/(なぜ問題か[：:])/g, '</p><p><strong>$1</strong>')
-    .replace(/(どう直すか[：:])/g, '</p><p><strong>$1</strong>')
-    .replace(/(直さないと何が起きるか[：:])/g, '</p><p><strong>$1</strong>')
-    .replace(/(判断基準[：:])/g, '</p><p><strong>$1</strong>')
-    .replace(/(根拠[：:])/g, '</p><p><strong>$1</strong>')
-  // 句点で段落分け
-  var sentences = formatted.split(/(?<=。)/)
+  // セクションキーワードで改行+強調
+  var keywords = ['問題[：:]', 'アクション[：:]', '参考[：:]', 'なぜ問題か[：:]', 'どう直すか[：:]', '直さないと[：:]', '根拠[：:]', '判断基準[：:]']
+  for (var ki = 0; ki < keywords.length; ki++) {
+    formatted = formatted.replace(new RegExp('(' + keywords[ki] + ')', 'g'), '</p><p><strong>$1</strong>')
+  }
+  // URL をリンク化
+  formatted = formatted.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:var(--accent);word-break:break-all">$1</a>')
+  // 改行で段落分け
+  var parts = formatted.split(/\n+/)
   var paragraphs = []
-  var current = ''
-  for (var i = 0; i < sentences.length; i++) {
-    current += sentences[i]
-    if ((i + 1) % 2 === 0 || i === sentences.length - 1) {
-      if (current.trim()) paragraphs.push('<p>' + current.trim() + '</p>')
-      current = ''
-    }
+  for (var i = 0; i < parts.length; i++) {
+    if (parts[i].trim()) paragraphs.push('<p>' + parts[i].trim() + '</p>')
   }
   return paragraphs.join('')
 }
