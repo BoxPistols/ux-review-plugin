@@ -877,7 +877,7 @@ function proceedWithAIReview(staticFindings) {
     renderReviewPreview(result)
     reviewLoading = false; $('btnReview').disabled = false; updateBottomBar()
     initChat()
-    // SpecBridge API で仕様根拠を非同期追加
+    // SpecBridge API で関連仕様を非同期追加
     enrichWithSpecs(result.details)
 
     // 履歴に自動保存
@@ -916,7 +916,7 @@ function textToParagraphs(text) {
   return paragraphs.join('')
 }
 
-// SpecBridge API: レビュー結果に仕様根拠を非同期追加
+// SpecBridge API: レビュー結果に関連仕様を非同期追加
 function enrichWithSpecs(details) {
   if (!details || !details.length) return
   details.forEach(function(d, idx) {
