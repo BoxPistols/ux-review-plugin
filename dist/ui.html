@@ -688,92 +688,66 @@ var REVIEW_PROMPT = [
 'あなたはUI/UXデザインの専門家です。',
 '以下のFigmaフレーム構造を分析し、日本語でレビューしてください。',
 '',
-'━━━ あなたの専門性 ━━━',
-'',
-'あなたは以下の知識を統合してレビューする:',
-'- 人間工学: 身体特性（視力、手の大きさ）、認知特性（注意、記憶、判断）、利用環境（デスクトップ/モバイル/屋外）',
-'- UX原則: Nielsen 10原則、Norman のアフォーダンス/シグニファイア/概念モデル、Fitts/Hick/Gestalt 法則',
-'- アクセシビリティ: WCAG、キーボード操作、スクリーンリーダー対応、色覚多様性',
-'- 情報設計: ユーザーフロー、情報階層、ナビゲーション構造',
-'- UIパターン: あらゆるWebの標準UIコンポーネントとその正しい使い方・よくある誤用',
-'',
+'━━━ 前提 ━━━',
 '作り手はUIの専門家ではなく業務領域の専門家であることが多い。',
-'Webの操作慣習（戻る、取り消し、進捗表示、フィードバック等）が暗黙知のまま設計に反映されないことがある。',
-'あなたの役割は、その暗黙知を具体的な指摘として明示することである。',
+'Webの操作慣習が暗黙知のまま設計に反映されないことがある。',
+'あなたの役割は、その暗黙知を具体的な指摘として明示すること。',
 '',
 '━━━ 分析手順 ━━━',
 '',
 '■ Step 1: 画面の理解',
-'ノード構造・テキスト内容・構造ヒント（⚑マーク）・画像（添付時）から:',
-'(a) この画面にどんなUIコンポーネントが使われているか識別する',
-'(b) このUIが提供しようとしている体験（ユーザーの目的）を推測する',
-'(c) 複数フレームの場合、それらの関係（遷移/親子/状態違い/並列）を推測する',
+'ノード構造・テキスト・構造ヒント（⚑マーク）・画像から:',
+'(a) UIコンポーネントを識別（構造シグナルを読む: ⚑, layout, fill, opacity, clickable, connector-line）',
+'(b) ユーザーの目的を推測',
+'(c) 複数フレーム時は関係性（遷移/親子/状態違い）を推測',
 '',
-'構造的シグナルの読み方:',
-'- ⚑マーク: 繰り返し構造、接続線、色差、opacity差、クリック設定の検出結果',
-'- [layout:VERTICAL/HORIZONTAL]: Auto Layout の方向',
-'- [fill:色] [opacity:値]: 視覚的な状態区別',
-'- [clickable]: インタラクション設定あり',
-'- [connector-line]: 子要素間の接続線（進行フローの手がかり）',
+'■ Step 2: 内部推論（出力に含めない）',
+'- このコンポーネントの責務を一文で説明できるか？ 2つ以上の動詞が必要なら責務が混在',
+'- Webの標準的な振る舞いから逸脱していないか？',
+'- このコンポーネント選択はユーザーの目的に最適か？ もっと適切なパターンはないか？',
+'- 各状態（初期/ローディング/空/エラー/成功/無効化）は定義されているか？',
+'- ユーザーがタスク完了までに迷う・戻れない・行き止まるポイントはないか？',
 '',
-'■ Step 2: 内部推論（出力には含めない）',
-'識別したコンポーネントごとに:',
-'- そのコンポーネントがWebで一般的にどう振る舞うべきか（標準の期待値）',
-'- この画面での使い方が標準から逸脱していないか',
-'- ユーザーの目的達成に対して、このコンポーネント選択は最適か',
-'- 事業目的（導入率、継続率、サポートコスト、手戻り防止）への影響',
+'■ Step 3: 3つのゴールでレビュー',
+'指摘を以下の3ゴールに分類する。ゴール1が最優先:',
 '',
-'■ Step 3: レビュー',
-'以下の優先度で指摘する:',
+'【ゴール1: ビジネスロジックの達成】category="フロー/目的達成"',
+'ユーザーがタスクを完了できるか。フローの抜け、行き止まり、判断材料の不足。',
 '',
-'【Critical: ユーザーが目的を達成できない】',
-'- フロー上のデッドエンド、データ破壊リスク、確認のない不可逆操作',
-'- 現在の状態がわからない、次にすべきことがわからない',
-'- コンポーネントの重大な誤用（本来の振る舞いから大きく逸脱）',
-'- バリデーション不足、フィードバック不在',
+'【ゴール2: エンジニア手戻りの防止】category="仕様/実装引継ぎ"',
+'エンジニアがデザイナーに確認を返す原因になる問題。状態未定義、インタラクション不明、エッジケース未記述。',
 '',
-'【Warning: 使えるが、迷う・間違える・遅くなる】',
-'- シグニファイアの不足（操作可能な要素が見た目で判別できない）',
-'- 一貫性の欠如（画面間でUIの見た目や用語が不統一）',
-'- 認知負荷が高い（情報過多、段階的開示の不在、Gestalt原則違反）',
-'- 状態定義の欠落（空/ローディング/エラー/ホバー/フォーカス/無効化）',
-'- インタラクション仕様の曖昧さ（操作後に何が起きるか不明）',
-'',
-'【Good: この設計判断は正しい】',
-'- ユーザーの目的に対して適切なコンポーネント選択',
-'- 標準的なUIパターンの正しい活用',
-'- 明確な導線、適切なフィードバック',
+'【ゴール3: 視覚的一貫性・操作性】category="UI品質"',
+'トークン非準拠、シグニファイア不足、認知負荷、一貫性の欠如。',
 '',
 '出力形式（JSONのみ）:',
 '{"score":1-100,',
 '"pattern":"識別したUIパターン",',
-'"asIs":"現状分析（3-5文。冒頭で識別したパターン名を明記）",',
-'"toBe":"改善方針（3-5文）",',
-'"details":[{"category":"カテゴリ","severity":"critical|warning|good","message":"指摘","target":"ノード名"}]}',
+'"asIs":"現状分析（2-3文。冒頭で識別したパターン名を明記）",',
+'"toBe":"改善方針（2-3文）",',
+'"details":[{"category":"ゴール名","severity":"critical|warning|good","message":"指摘","target":"ノード名"}]}',
 '',
 '━━━ ルール ━━━',
 '',
-'■ 出力形式',
-'- details は最大5件。Critical 優先、Good を1件含める',
-'- asIs 冒頭で「この画面は〇〇で構成されている」と明記',
+'■ スコア算出: 基本85点。Critical 1件 -20、Warning 1件 -5、Good 1件 +3',
+'■ details は最大5件。ゴール1の問題を優先、Good を1件含める',
+'■ message の書き方:',
+'  1行目: 指摘の要約（コンポーネント名を含む簡潔な1文）',
+'  \\n\\n問題: 誰が何に困るか1-2文',
+'  \\n\\nアクション: Figma上で何を変えるか1-2文',
+'  \\n\\n参考: 根拠URL 1つ（MDN/Material Design/Apple HIG/W3C/NN/g等）',
 '',
-'■ message の書き方（最重要）',
-'各 message は以下の構造で書く。各セクション間に必ず \\n\\n を入れて改行すること:',
+'■ 禁止パターン:',
+'  × 「わかりにくい」「見にくい」「使いにくい」（actionableでない）',
+'  × 「〜のほうが良い」（主観。根拠URLを示す）',
+'  × 毎回同じ原則名を繰り返す（根拠はURLで示す）',
+'  × px値のみの指摘（なぜその値か根拠がない）',
 '',
-'1行目: 指摘の要約。コンポーネント名を含む簡潔な1文',
+'■ 良い指摘の例:',
+'  ○ 「一覧に処理ステータスが表示されていないため、ユーザーは毎回詳細を開かないと進捗を判断できない。ステータスバッジを行末に追加してください」',
+'  ○ 「完了アクションがセカンダリスタイルになっている。フローの主要アクションはプライマリスタイルにすると、次のステップを迷わない」',
 '',
-'\\n\\n問題: 1-2文で簡潔に。',
-'',
-'\\n\\nアクション: Figma上で具体的に何をすべきか。1-2文。',
-'',
-'\\n\\n参考: 根拠となるURLを1つ添付（MDN、Material Design、Apple HIG、Nielsen Norman Group、W3C等の公式ドキュメント）',
-'',
-'■ 表現のルール',
-'- 簡潔に書く。1つの指摘は合計100-150字以内を目安',
-'- 毎回「ニールセンの〇〇」と言わない。根拠は参考URLで示す',
-'- 表現にバリエーションを持たせる。毎回同じ定型文にしない',
-'- 「〜してください」「〜を検討してください」のようなアクション促進形で書く',
-'- コンポーネントの使い方（この場面でこのコンポーネントが適切か）も指摘する',
+'■ 表現にバリエーションを持たせること。定型文の繰り返しを避ける',
 ].join('\n')
 
 var REVIEW_MODE_PROMPTS = {
@@ -845,14 +819,9 @@ function doReviewImprove() {
   var apiKey = $('apiKey').value.trim()
   if (!apiKey) { reviewLoading = false; updateBottomBar(); $('btnReview').disabled = false; addLog('reviewLog','error','APIキーを設定してください'); return }
 
-  // handoff / system モードのみ静的チェックを実行
-  if (reviewMode === 'handoff' || reviewMode === 'system') {
-    $('statusReviewText').textContent = '仕様チェック中...'; updateBottomBar()
-    parent.postMessage({ pluginMessage: { type: 'run-static-checks' } }, '*')
-  } else {
-    $('statusReviewText').textContent = 'AIがデザインを分析中...'; updateBottomBar()
-    proceedWithAIReview([])
-  }
+  // 全モードで静的チェックを実行
+  $('statusReviewText').textContent = '構造チェック中...'; updateBottomBar()
+  parent.postMessage({ pluginMessage: { type: 'run-static-checks' } }, '*')
 }
 
 function proceedWithAIReview(staticFindings) {
@@ -908,6 +877,8 @@ function proceedWithAIReview(staticFindings) {
     renderReviewPreview(result)
     reviewLoading = false; $('btnReview').disabled = false; updateBottomBar()
     initChat()
+    // SpecBridge API で仕様根拠を非同期追加
+    enrichWithSpecs(result.details)
 
     // 履歴に自動保存
     var frameName = selectedNodes.length ? selectedNodes[0].name : 'Unknown'
@@ -943,6 +914,35 @@ function textToParagraphs(text) {
     if (parts[i].trim()) paragraphs.push('<p>' + parts[i].trim() + '</p>')
   }
   return paragraphs.join('')
+}
+
+// SpecBridge API: レビュー結果に仕様根拠を非同期追加
+function enrichWithSpecs(details) {
+  if (!details || !details.length) return
+  details.forEach(function(d, idx) {
+    if (d.severity !== 'critical' && d.severity !== 'warning') return
+    if (d.source === 'static') return
+    fetch('https://a11y-spec-bridge.vercel.app/api/spec-search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: (d.message || '').slice(0, 150), k: 2 })
+    }).then(function(r) { return r.ok ? r.json() : null })
+    .then(function(data) {
+      if (!data || !data.results) return
+      var refs = data.results.filter(function(r) { return r.score >= 0.6 })
+      if (!refs.length) return
+      // 該当の mod-item に根拠リンクを追加
+      var items = document.querySelectorAll('.mod-item')
+      if (items[idx]) {
+        var refDiv = document.createElement('div')
+        refDiv.style.cssText = 'margin-top:6px;font-size:11px;color:var(--text-dim)'
+        refDiv.innerHTML = refs.map(function(r) {
+          return '<a href="' + esc(r.url) + '" target="_blank" style="color:var(--accent);margin-right:8px">' + esc(r.source + ': ' + r.title) + '</a>'
+        }).join('')
+        items[idx].appendChild(refDiv)
+      }
+    }).catch(function() { /* API失敗時はスキップ */ })
+  })
 }
 
 function renderDetailItem(d, idx) {
