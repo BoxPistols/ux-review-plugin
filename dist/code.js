@@ -476,9 +476,12 @@ figma.ui.onmessage = function(msg) {
   if (msg.type === "save-review") {
     figma.clientStorage.getAsync("review_history").then(function(existing) {
       var history = existing || [];
-      // 同じフレームの古い履歴を保持しつつ新規追加（最大20件）
       history.unshift(msg.entry);
-      if (history.length > 20) history = history.slice(0, 20);
+      // ピン付きは無制限、通常は最大20件
+      var pinned = history.filter(function(e) { return e.pinned; });
+      var unpinned = history.filter(function(e) { return !e.pinned; });
+      if (unpinned.length > 20) unpinned = unpinned.slice(0, 20);
+      history = pinned.concat(unpinned);
       return figma.clientStorage.setAsync("review_history", history).then(function() {
         figma.ui.postMessage({ type: "review-history", history: history });
       });
@@ -503,6 +506,62 @@ figma.ui.onmessage = function(msg) {
   if (msg.type === "clear-review-history") {
     figma.clientStorage.setAsync("review_history", []).then(function() {
       figma.ui.postMessage({ type: "review-history", history: [] });
+    });
+  }
+
+  // ── ログ編集 ──
+  if (msg.type === "update-review") {
+    figma.clientStorage.getAsync("review_history").then(function(existing) {
+      var history = existing || [];
+      for (var i = 0; i < history.length; i++) {
+        if (history[i].id === msg.id) {
+          // detail_N フィールドは details 配列の N 番目の message を更新
+          if (msg.field.indexOf("detail_") === 0) {
+            var idx = parseInt(msg.field.split("_")[1]);
+            if (history[i].details && history[i].details[idx]) {
+              history[i].details[idx].message = msg.value;
+            }
+          } else {
+            history[i][msg.field] = msg.value;
+          }
+          history[i].editedAt = Date.now();
+          break;
+        }
+      }
+      return figma.clientStorage.setAsync("review_history", history).then(function() {
+        figma.ui.postMessage({ type: "review-history", history: history });
+      });
+    });
+  }
+
+  if (msg.type === "toggle-pin-review") {
+    figma.clientStorage.getAsync("review_history").then(function(existing) {
+      var history = existing || [];
+      for (var i = 0; i < history.length; i++) {
+        if (history[i].id === msg.id) {
+          history[i].pinned = !history[i].pinned;
+          break;
+        }
+      }
+      return figma.clientStorage.setAsync("review_history", history).then(function() {
+        figma.ui.postMessage({ type: "review-history", history: history });
+      });
+    });
+  }
+
+  if (msg.type === "remove-review-detail") {
+    figma.clientStorage.getAsync("review_history").then(function(existing) {
+      var history = existing || [];
+      for (var i = 0; i < history.length; i++) {
+        if (history[i].id === msg.id && history[i].details) {
+          history[i].details.splice(msg.detailIndex, 1);
+          history[i].editedAt = Date.now();
+          break;
+        }
+      }
+      return figma.clientStorage.setAsync("review_history", history).then(function() {
+        figma.ui.postMessage({ type: "review-history", history: history });
+      });
     });
   }
 

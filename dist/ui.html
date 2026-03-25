@@ -298,6 +298,84 @@ html, body {
 .hist-del { background: none; border: none; color: var(--text-dim); font-size: 14px; cursor: pointer; padding: 2px 6px; line-height: 1; }
 .hist-del:hover { color: var(--red); }
 
+/* ── Header tabs ── */
+.header-tabs { display: flex; gap: 0; margin-left: 16px; flex: 1; }
+.header-tab {
+  padding: 8px 14px; font-size: 12px; font-weight: 600;
+  color: var(--text-dim); cursor: pointer; position: relative; transition: color 0.15s;
+}
+.header-tab:hover { color: var(--text-sub); }
+.header-tab.active { color: var(--text); }
+.header-tab.active::after {
+  content: ''; position: absolute; bottom: -1px; left: 8px; right: 8px;
+  height: 2px; background: var(--accent); border-radius: 1px;
+}
+.header-tab .tab-badge {
+  font-size: 10px; background: var(--accent-soft); color: var(--accent);
+  padding: 0 5px; border-radius: 8px; margin-left: 4px; font-weight: 700;
+}
+
+/* ── Log panel ── */
+.log-entry { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.log-entry:last-child { border-bottom: none; }
+.log-entry.pinned { background: var(--accent-soft); }
+.log-entry-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.log-pin {
+  background: none; border: none; cursor: pointer; font-size: 13px;
+  color: var(--text-dim); padding: 2px; line-height: 1; transition: color 0.15s; flex-shrink: 0;
+}
+.log-pin:hover, .log-pin.pinned { color: var(--yellow); }
+.log-expand {
+  background: none; border: none; cursor: pointer; color: var(--text-dim);
+  font-size: 11px; padding: 2px 6px; transition: color 0.15s; font-family: var(--font);
+}
+.log-expand:hover { color: var(--text); }
+.log-editable {
+  cursor: text; padding: 2px 4px; border-radius: 4px; transition: background 0.15s;
+}
+.log-editable:hover { background: var(--surface-hi); }
+.log-editing {
+  width: 100%; background: var(--surface); border: 1px solid var(--accent);
+  border-radius: 4px; padding: 6px 8px; font-size: 12px; color: var(--text);
+  outline: none; font-family: var(--font); line-height: 1.6; resize: vertical; min-height: 48px;
+}
+.log-memo {
+  margin-top: 8px; padding: 6px 8px; background: var(--accent-soft);
+  border-radius: 6px; font-size: 11px; color: var(--accent); line-height: 1.5;
+}
+.log-memo-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 4px; padding: 4px 8px; font-size: 11px; color: var(--text);
+  outline: none; font-family: var(--font); margin-top: 6px;
+}
+.log-memo-input:focus { border-color: var(--accent); }
+.log-memo-input::placeholder { color: var(--text-dim); }
+.log-detail-item {
+  padding: 8px 10px; border-bottom: 1px solid var(--border); position: relative;
+  font-size: 12px; line-height: 1.7; color: var(--text-sub);
+}
+.log-detail-item:last-child { border-bottom: none; }
+.log-detail-remove {
+  position: absolute; top: 6px; right: 4px;
+  background: none; border: none; color: var(--text-dim); cursor: pointer;
+  font-size: 12px; padding: 2px 4px; line-height: 1;
+}
+.log-detail-remove:hover { color: var(--red); }
+.log-actions { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+.log-btn {
+  background: none; border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text-dim); cursor: pointer; padding: 3px 8px; font-size: 11px;
+  font-family: var(--font); transition: all 0.15s;
+}
+.log-btn:hover { border-color: var(--accent); color: var(--accent); }
+.log-btn.danger:hover { border-color: var(--red); color: var(--red); }
+.log-details-section { margin-top: 8px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.log-details-toggle {
+  background: none; border: none; cursor: pointer; color: var(--text-dim);
+  font-size: 11px; padding: 4px 0; font-family: var(--font); transition: color 0.15s;
+}
+.log-details-toggle:hover { color: var(--text); }
+
 /* ── Collection list ── */
 .coll-card {
   padding: 10px 0; border-bottom: 1px solid var(--border);
@@ -412,6 +490,10 @@ html, body {
       <span class="logo-mark"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 8L5 2L8 8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       UX Review<span>.</span>AI
     </span>
+    <div class="header-tabs">
+      <div class="header-tab active" data-tab="review">レビュー</div>
+      <div class="header-tab" data-tab="log">ログ<span class="tab-badge hidden" id="logBadge">0</span></div>
+    </div>
     <div class="hdr-right">
       <button class="icon-btn" id="btnTheme" title="ライト/ダーク切替">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" id="iconTheme"><circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M3 3l1.1 1.1M9.9 9.9L11 11M11 3l-1.1 1.1M4.1 9.9L3 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -478,13 +560,6 @@ html, body {
         <button class="btn btn-secondary" style="flex:1;padding:6px 14px;font-size:12px;font-weight:500" id="btnCopyReview">全文コピー</button>
         <button class="btn btn-secondary" style="flex:1;padding:6px 14px;font-size:12px;font-weight:500" id="btnDlReview">MDダウンロード</button>
       </div>
-      <div id="reviewHistorySection" class="hidden">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px">
-          <span class="section-title" style="padding:0">レビュー履歴</span>
-          <button style="background:none;border:none;color:var(--text-dim);font-size:12px;cursor:pointer;font-family:var(--font)" id="btnClearHistory">全消去</button>
-        </div>
-        <div id="reviewHistoryList"></div>
-      </div>
       <!-- チャット -->
       <div class="hidden chat-section" id="chatSection">
         <div class="section-title">深掘り — レビュー結果をさらに掘り下げる</div>
@@ -498,6 +573,17 @@ html, body {
         <div class="chat-hint">Cmd+Enter で送信 / Enter で改行 / Cmd+V で画像貼り付け</div>
       </div>
       <div class="log" id="reviewLog"></div>
+    </div>
+  </div>
+
+  <!-- ═══ LOG TAB ═══ -->
+  <div class="main-panel hidden" id="panel-log">
+    <div class="panel-body" id="logBody">
+      <div class="empty-state" id="logEmpty">
+        <div class="empty-icon">✦</div>
+        <div>レビュー履歴がありません<br><span style="font-size:11px;color:var(--text-dim)">レビューを実行するとここに保存されます</span></div>
+      </div>
+      <div id="logList"></div>
     </div>
   </div>
 
@@ -524,14 +610,27 @@ function isGemini(m) { return m.indexOf('gemini') === 0 }
 function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
 var currentTab = 'review'
-
-var currentTab = 'review'
 var currentReview = null
 var selectedNodes = []
 var selectedComponentSet = null
 var reviewLoading = false
 var userLocale = 'ja'
 var reviewMode = 'ia'
+var logHistory = []
+
+// タブ切替
+document.querySelectorAll('.header-tab').forEach(function(tab) {
+  tab.addEventListener('click', function() {
+    currentTab = tab.getAttribute('data-tab')
+    document.querySelectorAll('.header-tab').forEach(function(t) { t.classList.toggle('active', t === tab) })
+    if (currentTab === 'review') {
+      show($('panel-review')); hide($('panel-log'))
+    } else {
+      hide($('panel-review')); show($('panel-log'))
+    }
+    updateBottomBar()
+  })
+})
 
 // レビュー観点チップ
 document.querySelectorAll('.r-chip').forEach(function(c) {
@@ -546,6 +645,16 @@ function updateBottomBar() {
   if (currentTab === 'review') {
     if (reviewLoading) { show($('statusReview')) }
     else if (selectedNodes.length) { show($('actReview')) }
+  }
+}
+
+function updateLogBadge() {
+  var badge = $('logBadge')
+  if (logHistory.length) {
+    badge.textContent = logHistory.length
+    show(badge)
+  } else {
+    hide(badge)
   }
 }
 
@@ -593,7 +702,9 @@ window.onmessage = function(event) {
     parent.postMessage({ pluginMessage: { type: 'load-review-history' } }, '*')
   }
   if (msg.type === 'review-history') {
-    renderReviewHistory(msg.history || [])
+    logHistory = msg.history || []
+    renderLogPanel(logHistory)
+    updateLogBadge()
   }
 
   // Selection
@@ -895,8 +1006,15 @@ function proceedWithAIReview(staticFindings) {
       timestamp: Date.now(),
       frameName: frameName,
       score: result.score,
+      pattern: result.pattern || '',
       asIs: result.asIs,
       toBe: result.toBe,
+      details: (result.details || []).map(function(d) {
+        return { category: d.category, severity: d.severity, message: d.message, target: d.target, source: d.source }
+      }),
+      memo: '',
+      pinned: false,
+      editedAt: null,
     }}}, '*')
   }).catch(function(e) {
     reviewLoading = false; updateBottomBar(); $('btnReview').disabled = false
@@ -1072,48 +1190,208 @@ $('reviewPreview').addEventListener('click', function(ev) {
   })
 })
 
-// Review結果をクリア（新しいレビュー実行時に自動クリア）
+// ══════════════════════════════════════════════════════════════
+// ログパネル
+// ══════════════════════════════════════════════════════════════
+function renderLogPanel(history) {
+  if (!history.length) { show($('logEmpty')); $('logList').innerHTML = ''; return }
+  hide($('logEmpty'))
+  // ピン付きを先頭に、残りは新しい順
+  var pinned = history.filter(function(e) { return e.pinned })
+  var unpinned = history.filter(function(e) { return !e.pinned })
+  var sorted = pinned.concat(unpinned)
 
-// ══════════════════════════════════════════════════════════════
-// Review: 履歴表示
-// ══════════════════════════════════════════════════════════════
-function renderReviewHistory(history) {
-  if (!history.length) { hide($('reviewHistorySection')); return }
-  show($('reviewHistorySection'))
-  var h = ''
-  for (var i = 0; i < history.length; i++) {
-    var e = history[i]
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 8px">'
+  h += '<span style="font-size:11px;color:var(--text-dim)">' + history.length + '件のログ</span>'
+  h += '<button class="log-btn danger" id="btnClearAllLogs">全消去</button></div>'
+
+  for (var i = 0; i < sorted.length; i++) {
+    var e = sorted[i]
     var scoreClass = e.score >= 75 ? 'high' : e.score >= 50 ? 'mid' : 'low'
     var d = new Date(e.timestamp)
     var dateStr = (d.getMonth()+1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + ('0'+d.getMinutes()).slice(-2)
-    h += '<div class="hist-item" data-id="' + e.id + '">'
-    h += '<div class="hist-head">'
+    var editedStr = e.editedAt ? ' (編集済)' : ''
+
+    h += '<div class="log-entry' + (e.pinned ? ' pinned' : '') + '" data-log-id="' + e.id + '">'
+    h += '<div class="log-entry-head">'
+    h += '<button class="log-pin' + (e.pinned ? ' pinned' : '') + '" data-pin="' + e.id + '" title="ピン留め">' + (e.pinned ? '★' : '☆') + '</button>'
     h += '<span class="hist-score ' + scoreClass + '">' + e.score + '</span>'
-    h += '<span class="hist-name">' + esc(e.frameName) + '</span>'
-    h += '<span class="hist-date">' + dateStr + '</span>'
+    h += '<span class="hist-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(e.frameName) + '</span>'
+    h += '<span style="font-size:11px;color:var(--text-dim);font-family:var(--mono)">' + dateStr + editedStr + '</span>'
+    h += '<button class="log-expand" data-expand="' + e.id + '">詳細</button>'
     h += '<button class="hist-del" data-del="' + e.id + '" title="削除">×</button>'
     h += '</div>'
-    h += '<div class="hist-summary">' + esc(e.asIs || '') + '</div>'
-    if (e.toBe) h += '<div class="hist-tobe">' + esc(e.toBe) + '</div>'
+
+    // 現状分析（編集可能）
+    h += '<div style="font-size:12px;color:var(--text-sub);line-height:1.7">'
+    h += '<span class="log-editable" data-edit-id="' + e.id + '" data-edit-field="asIs">' + esc(e.asIs || '') + '</span>'
     h += '</div>'
+
+    // メモ
+    if (e.memo) {
+      h += '<div class="log-memo"><span class="log-editable" data-edit-id="' + e.id + '" data-edit-field="memo">' + esc(e.memo) + '</span></div>'
+    }
+
+    // 展開セクション（初期非表示）
+    h += '<div class="hidden" id="logDetail_' + e.id + '">'
+
+    // 改善提案（編集可能）
+    if (e.toBe) {
+      h += '<div style="margin-top:8px"><span style="font-size:11px;color:var(--green);font-weight:600">改善提案</span>'
+      h += '<div style="font-size:12px;color:var(--text-sub);line-height:1.7;margin-top:2px">'
+      h += '<span class="log-editable" data-edit-id="' + e.id + '" data-edit-field="toBe">' + esc(e.toBe) + '</span>'
+      h += '</div></div>'
+    }
+
+    // 指摘カード（個別削除可能）
+    if (e.details && e.details.length) {
+      h += '<div class="log-details-section">'
+      for (var j = 0; j < e.details.length; j++) {
+        var det = e.details[j]
+        var sevColor = det.severity === 'critical' ? 'var(--red)' : det.severity === 'good' ? 'var(--green)' : 'var(--yellow)'
+        h += '<div class="log-detail-item" data-detail-idx="' + j + '">'
+        h += '<span style="font-size:10px;font-weight:700;color:' + sevColor + '">' + (det.severity || '').toUpperCase() + '</span> '
+        h += '<span style="font-size:11px;color:var(--text-dim)">' + esc(det.category || '') + '</span>'
+        if (det.target) h += ' <span style="font-size:11px;color:var(--accent);font-family:var(--mono)">' + esc(det.target) + '</span>'
+        h += '<div style="margin-top:2px"><span class="log-editable" data-edit-id="' + e.id + '" data-edit-field="detail_' + j + '">' + esc((det.message || '').split('\n')[0]) + '</span></div>'
+        h += '<button class="log-detail-remove" data-remove-detail="' + e.id + '_' + j + '" title="この指摘を削除">×</button>'
+        h += '</div>'
+      }
+      h += '</div>'
+    }
+
+    // アクション
+    h += '<div class="log-actions">'
+    if (!e.memo) h += '<button class="log-btn" data-add-memo="' + e.id + '">メモ追加</button>'
+    h += '<button class="log-btn" data-copy-log="' + e.id + '">コピー</button>'
+    h += '</div>'
+
+    h += '</div>' // logDetail end
+    h += '</div>' // log-entry end
   }
-  $('reviewHistoryList').innerHTML = h
+  $('logList').innerHTML = h
 }
 
-$('reviewHistoryList').addEventListener('click', function(ev) {
-  var delBtn = ev.target.closest('[data-del]')
+// ログパネルのイベントハンドラ（デリゲーション）
+$('logBody').addEventListener('click', function(ev) {
+  var target = ev.target
+
+  // 全消去
+  if (target.id === 'btnClearAllLogs') {
+    if (confirm('ピン留めされていないログも含め、全て削除しますか？')) {
+      parent.postMessage({ pluginMessage: { type: 'clear-review-history' } }, '*')
+    }
+    return
+  }
+
+  // ピン留め
+  var pinBtn = target.closest('[data-pin]')
+  if (pinBtn) {
+    parent.postMessage({ pluginMessage: { type: 'toggle-pin-review', id: pinBtn.getAttribute('data-pin') } }, '*')
+    return
+  }
+
+  // 削除
+  var delBtn = target.closest('[data-del]')
   if (delBtn) {
     ev.stopPropagation()
     parent.postMessage({ pluginMessage: { type: 'delete-review', id: delBtn.getAttribute('data-del') } }, '*')
     return
   }
-  var item = ev.target.closest('.hist-item')
-  if (item) item.classList.toggle('expanded')
-})
 
-$('btnClearHistory').addEventListener('click', function() {
-  if (confirm('レビュー履歴を全て削除しますか？')) {
-    parent.postMessage({ pluginMessage: { type: 'clear-review-history' } }, '*')
+  // 詳細展開
+  var expandBtn = target.closest('[data-expand]')
+  if (expandBtn) {
+    var detail = $('logDetail_' + expandBtn.getAttribute('data-expand'))
+    if (detail) {
+      detail.classList.toggle('hidden')
+      expandBtn.textContent = detail.classList.contains('hidden') ? '詳細' : '閉じる'
+    }
+    return
+  }
+
+  // 指摘カード削除
+  var removeBtn = target.closest('[data-remove-detail]')
+  if (removeBtn) {
+    ev.stopPropagation()
+    var parts = removeBtn.getAttribute('data-remove-detail').split('_')
+    var logId = parts[0], detailIdx = parseInt(parts[1])
+    parent.postMessage({ pluginMessage: { type: 'remove-review-detail', id: logId, detailIndex: detailIdx } }, '*')
+    return
+  }
+
+  // メモ追加
+  var memoBtn = target.closest('[data-add-memo]')
+  if (memoBtn) {
+    var mId = memoBtn.getAttribute('data-add-memo')
+    var input = document.createElement('input')
+    input.className = 'log-memo-input'
+    input.placeholder = 'メモを入力...'
+    memoBtn.parentNode.insertBefore(input, memoBtn)
+    memoBtn.remove()
+    input.focus()
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.isComposing) {
+        parent.postMessage({ pluginMessage: { type: 'update-review', id: mId, field: 'memo', value: input.value.trim() } }, '*')
+      }
+    })
+    input.addEventListener('blur', function() {
+      if (input.value.trim()) {
+        parent.postMessage({ pluginMessage: { type: 'update-review', id: mId, field: 'memo', value: input.value.trim() } }, '*')
+      }
+    })
+    return
+  }
+
+  // コピー
+  var copyBtn = target.closest('[data-copy-log]')
+  if (copyBtn) {
+    var cId = copyBtn.getAttribute('data-copy-log')
+    var entry = logHistory.find(function(e) { return e.id === cId })
+    if (entry) {
+      var md = 'Score: ' + entry.score + '/100\n'
+      if (entry.pattern) md += 'Pattern: ' + entry.pattern + '\n'
+      md += '\n現状分析:\n' + (entry.asIs || '') + '\n'
+      if (entry.toBe) md += '\n改善提案:\n' + entry.toBe + '\n'
+      if (entry.memo) md += '\nメモ: ' + entry.memo + '\n'
+      if (entry.details && entry.details.length) {
+        md += '\n指摘:\n'
+        entry.details.forEach(function(d) {
+          md += '- [' + (d.severity || '').toUpperCase() + '] ' + (d.category || '') + ': ' + (d.message || '') + '\n'
+        })
+      }
+      copyToClipboard(md, copyBtn, 'コピー')
+    }
+    return
+  }
+
+  // インライン編集
+  var editable = target.closest('.log-editable')
+  if (editable && !editable.querySelector('.log-editing')) {
+    var eId = editable.getAttribute('data-edit-id')
+    var eField = editable.getAttribute('data-edit-field')
+    var currentText = editable.textContent
+    var ta = document.createElement('textarea')
+    ta.className = 'log-editing'
+    ta.value = currentText
+    editable.textContent = ''
+    editable.appendChild(ta)
+    ta.focus()
+    ta.style.height = Math.max(48, ta.scrollHeight) + 'px'
+
+    function saveEdit() {
+      var newVal = ta.value.trim()
+      editable.textContent = newVal || currentText
+      if (newVal && newVal !== currentText) {
+        parent.postMessage({ pluginMessage: { type: 'update-review', id: eId, field: eField, value: newVal } }, '*')
+      }
+    }
+    ta.addEventListener('blur', saveEdit)
+    ta.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.isComposing) { e.preventDefault(); ta.blur() }
+      if (e.key === 'Escape') { editable.textContent = currentText }
+    })
+    return
   }
 })
 
