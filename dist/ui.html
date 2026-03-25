@@ -194,16 +194,17 @@ html, body {
 /* Modifications list — clean table-like layout, no border-left accent */
 .mod-list { display: flex; flex-direction: column; gap: 0; }
 .mod-item {
-  font-size: 13px; color: var(--text-sub);
-  padding: 12px 8px; border-bottom: 1px solid var(--border);
-  line-height: 1.85; letter-spacing: 0.02em; cursor: pointer; transition: background 0.15s;
+  font-size: 13px; color: var(--text);
+  padding: 14px 10px; border-bottom: 1px solid var(--border);
+  line-height: 1.8; letter-spacing: 0.02em; cursor: pointer; transition: background 0.15s;
   margin: 0 -8px;
 }
 .mod-item:hover { background: var(--surface-hi); }
 .mod-item:last-child { border-bottom: none; }
-.mod-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
-.mod-target { color: var(--accent); font-family: var(--mono); font-size: 12px; font-weight: 600; }
-.mod-action { color: var(--text-dim); font-family: var(--mono); font-size: 12px; }
+.mod-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.mod-target { color: var(--accent); font-family: var(--mono); font-size: 11px; font-weight: 600; }
+.mod-action { color: var(--text-dim); font-family: var(--mono); font-size: 11px; }
+.mod-body { color: var(--text-sub); font-size: 13px; line-height: 1.9; }
 .mod-value { color: var(--text); font-weight: 600; }
 .mod-reason { color: var(--text-dim); font-size: 12px; margin-top: 2px; }
 
@@ -963,9 +964,23 @@ function renderDetailItem(d, idx) {
   h += '<span class="mod-action">' + esc(d.category || '') + '</span>'
   h += '<button class="copy-btn" data-copy-text="' + esc(text).replace(/\n/g, '&#10;') + '">Copy</button>'
   h += '</div>'
-  h += '<div style="margin-top:4px">' + esc(d.message || '') + '</div>'
+  h += '<div class="mod-body">' + formatMessage(d.message || '') + '</div>'
   h += '</div>'
   return h
+}
+
+function formatMessage(msg) {
+  var html = esc(msg)
+  // セクションキーワードを強調+改行
+  html = html.replace(/(問題[：:])/g, '<br><strong style="color:var(--red)">$1</strong> ')
+  html = html.replace(/(アクション[：:])/g, '<br><strong style="color:var(--green)">$1</strong> ')
+  html = html.replace(/(参考[：:])/g, '<br><strong style="color:var(--text-dim)">$1</strong> ')
+  // URL をリンク化
+  html = html.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:var(--accent);word-break:break-all;font-size:11px">$1</a>')
+  // \n を改行に
+  html = html.replace(/\\n\\n|\\n/g, '<br>')
+  html = html.replace(/\n/g, '<br>')
+  return html
 }
 
 function renderReviewPreview(r) {
