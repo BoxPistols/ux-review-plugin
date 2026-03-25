@@ -749,6 +749,9 @@ var REVIEW_PROMPT = [
 '  ○ 「完了アクションがセカンダリスタイルになっている。フローの主要アクションはプライマリスタイルにすると、次のステップを迷わない」',
 '',
 '■ 表現にバリエーションを持たせること。定型文の繰り返しを避ける',
+'',
+'━━━ 出力例（Few-shot） ━━━',
+'{"score":65,"pattern":"入力フォーム（複数ステップ）","asIs":"保険申込の入力フォーム。3ステップ構成だが、現在位置を示すステッパーに完了/未完了の視覚的区別がなく、ユーザーが進捗を把握しにくい。","toBe":"ステッパーに色・アイコンで完了状態を明示し、各ステップのバリデーションタイミングを定義することで、離脱率を下げる。","details":[{"category":"フロー/目的達成","severity":"critical","message":"送信ボタン押下後のフィードバックが未定義\\n\\n問題: ユーザーが送信ボタンを押した後、成功・失敗どちらのフィードバックも定義されていない。ユーザーは処理が完了したか判断できず、二重送信や離脱の原因になる。\\n\\nアクション: 送信中（ローディング）・成功・エラーの3状態をデザインし、成功時は次のステップへの導線を明示してください。\\n\\n参考: https://www.nngroup.com/articles/indicators-validations-notifications/","target":"submit-button"},{"category":"仕様/実装引継ぎ","severity":"warning","message":"ステップ間の遷移条件が不明\\n\\n問題: Step 1→2→3の遷移がどの条件で許可されるか（全フィールド入力済み？必須のみ？）がデザインから読み取れない。エンジニアが自己判断で実装し、意図と異なる挙動になる。\\n\\nアクション: 各ステップの必須フィールドと遷移条件をアノテーションで明記してください。\\n\\n参考: https://www.w3.org/WAI/tutorials/forms/multi-page/","target":"form-stepper"},{"category":"UI品質","severity":"good","message":"入力フィールドのラベル配置が一貫している\\n\\n全フィールドでラベルがフィールド上部に統一配置されており、視線の移動が最小限に抑えられている。この一貫性を他の画面にも展開してください。","target":"input-fields"}]}',
 ].join('\n')
 
 var REVIEW_MODE_PROMPTS = {
@@ -798,8 +801,12 @@ setupImagePaste('chatInput', 'chatImgPreview', function(v) { chatImage = v })
 function collectReviewContext() {
   var ctx = []
   var note = ($('ctxNote') && $('ctxNote').value) ? $('ctxNote').value.trim() : ''
-  if (note) ctx.push(note)
-  return ctx.length ? '\n\n━━━ レビュー依頼の前提条件 ━━━\n' + ctx.join('\n') : ''
+  if (note) {
+    ctx.push('ユーザーストーリー: ' + note)
+  } else {
+    ctx.push('ユーザーストーリー: 未記入。ノード構造・テキスト・画像からユーザーの目的を推測し、推測した目的を asIs の冒頭に明記してください。')
+  }
+  return '\n\n━━━ レビュー依頼の前提条件 ━━━\n' + ctx.join('\n')
 }
 
 function doReviewImprove() {
@@ -1262,7 +1269,7 @@ function sendChat() {
     }
     p = fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ model: model, messages: oaiMessages, max_completion_tokens: text.length < 30 ? 500 : 1500 })
+      body: JSON.stringify({ model: model, messages: oaiMessages, max_completion_tokens: text.length < 50 ? 500 : 1500 })
     }).then(function(r) { if (!r.ok) throw new Error('API error'); return r.json() })
       .then(function(d) { return d.choices[0].message.content })
   }
