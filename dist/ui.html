@@ -922,11 +922,16 @@ function enrichWithSpecs(details) {
   details.forEach(function(d, idx) {
     if (d.severity !== 'critical' && d.severity !== 'warning') return
     if (d.source === 'static') return
+    // クエリ: category + target + message の1行目
+    var q = (d.category || '') + ' ' + (d.target || '') + ' ' + ((d.message || '').split('\n')[0] || '').slice(0, 100)
+    var ctrl = new AbortController()
+    var timer = setTimeout(function() { ctrl.abort() }, 2000)
     fetch('https://a11y-spec-bridge.vercel.app/api/spec-search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: (d.message || '').slice(0, 150), k: 2 })
-    }).then(function(r) { return r.ok ? r.json() : null })
+      body: JSON.stringify({ query: q.trim(), k: 2 }),
+      signal: ctrl.signal
+    }).then(function(r) { clearTimeout(timer); return r.ok ? r.json() : null })
     .then(function(data) {
       if (!data || !data.results) return
       var refs = data.results.filter(function(r) { return r.score >= 0.6 })
