@@ -1,0 +1,252 @@
+[
+  {
+    "id": "curated-card-identity",
+    "title": "カードUIが何を表しているか分からない",
+    "category": "ui-quality",
+    "tags": ["card", "molecule", "organism", "コンポーネント", "集合体", "意味"],
+    "text": "カード内に画像・テキスト・ボタン・バッジが並んでいるが、このカード1枚が何を意味する単位なのか（1件のプロジェクト？1人のユーザー？1つのタスク？）が一目で判断できない。カードのタイトルやアイコンで「何の1件か」を明示すること。",
+    "rationale": "Molecule/Organismレベルのコンポーネントは要素が増えるほど意味が曖昧になる。ユーザーは塊を見て瞬時に理解できる必要がある",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-card-action-unclear",
+    "title": "カードをクリックしたら何が起きるか不明",
+    "category": "spec-handoff",
+    "tags": ["card", "click", "interaction", "カード", "遷移先", "タップ"],
+    "text": "カード全体がクリッカブルに見えるが、クリック時の挙動が定義されていない。詳細画面に遷移するのか、モーダルが開くのか、選択状態になるのか。カード内にボタンがある場合、カードクリックとボタンクリックの違いも明示すること。",
+    "rationale": "カードのクリック挙動が曖昧だとエンジニアが実装を迷い、仕様確認で手戻りが発生する",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-card-variable-content",
+    "title": "カード内の情報量が変動するとき崩れる",
+    "category": "spec-handoff",
+    "tags": ["card", "layout", "overflow", "可変", "崩れ", "高さ揃え"],
+    "text": "カードのデザインが固定長の文字列で作られているが、実データではタイトルが2行になったり、タグが5個ついたり、説明文がなかったりする。カード間で高さが揃わなくなる。最小/最大の内容バリエーションでデザインを検証すること。",
+    "rationale": "パラメータの増減でレイアウトが崩れるのはカードUIで最も多い実装トラブル",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-table-column-overflow",
+    "title": "テーブルの列が増えたとき/画面が狭いときの対応",
+    "category": "spec-handoff",
+    "tags": ["table", "column", "responsive", "scroll", "テーブル", "列数", "横スクロール"],
+    "text": "テーブルのデザインが6列で作られているが、実運用では列が追加される可能性がある。また画面幅が狭い端末での表示も未定義。横スクロール/列の優先度（固定列）/レスポンシブでのカード化のいずれかを定義すること。",
+    "rationale": "テーブルは列数と画面幅の組み合わせで最も崩れやすいUIパターン",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-table-row-volume",
+    "title": "テーブルの行数が大量になったときの対処",
+    "category": "spec-handoff",
+    "tags": ["table", "pagination", "infinite-scroll", "行数", "ページネーション", "パフォーマンス"],
+    "text": "テーブルが10行で表示されているが、実データでは100件・1000件になる可能性がある。ページネーション/無限スクロール/「もっと見る」ボタンのどれを使うか、1ページの表示件数は何件かが未定義。大量データ時の表示方針を決めること。",
+    "rationale": "行数の想定がないとパフォーマンス問題やUXの劣化が本番リリース後に発覚する",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-table-sort-filter",
+    "title": "テーブルのソート・フィルター操作が未定義",
+    "category": "spec-handoff",
+    "tags": ["table", "sort", "filter", "search", "ソート", "フィルター", "絞り込み"],
+    "text": "一覧テーブルにソートやフィルター機能があるように見えるが、どの列がソート可能か、フィルターの条件は何か（テキスト検索？ドロップダウン？日付範囲？）が定義されていない。エンジニアが実装範囲を判断できないので明示すること。",
+    "rationale": "ソート/フィルターは顧客要望で後から追加されやすく、未定義のまま進むと実装コストが膨らむ",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-table-empty-cell",
+    "title": "テーブルでデータがない列の表示",
+    "category": "ui-quality",
+    "tags": ["table", "empty", "null", "ハイフン", "空欄", "未設定"],
+    "text": "テーブルの一部のセルにデータがない場合の表示が未定義。空白のままか、ハイフン「-」か、「未設定」と表示するか。空白だと「読み込み中なのか」「本当に空なのか」が区別できない。統一ルールを定めること。",
+    "rationale": "空セルの表現が統一されていないと、データの有無をユーザーが誤判断する",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-form-field-grouping",
+    "title": "フォームの入力項目のグルーピングが不明",
+    "category": "ui-quality",
+    "tags": ["form", "group", "section", "fieldset", "フォーム", "グループ", "セクション"],
+    "text": "入力フォームに10個以上の項目が縦に並んでいるが、意味的なグルーピング（基本情報/連絡先/設定など）がされていない。ユーザーは全体像が掴めず、入力の途中で離脱する。関連項目をセクション分けし、見出しをつけること。",
+    "rationale": "項目が多いフォームはグルーピングしないと認知負荷が高くなり、入力完了率が下がる",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-api-error-handling",
+    "title": "API エラー時の画面表示が未定義",
+    "category": "spec-handoff",
+    "tags": ["API", "error", "500", "timeout", "network", "エラー", "障害"],
+    "text": "画面がAPIからデータを取得する前提で設計されているが、APIがエラーを返したとき（500エラー・タイムアウト・ネットワーク切断）に何を表示するかが定義されていない。エラーメッセージ・リトライボタン・代替表示を設計すること。",
+    "rationale": "バックエンド連携で最も確実に起きるのがエラー。未定義だとユーザーは白画面を見ることになる",
+    "severity": "error",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-api-data-create-update",
+    "title": "データの作成/更新がどのAPIに対応するか不明",
+    "category": "spec-handoff",
+    "tags": ["API", "CRUD", "create", "update", "save", "POST", "PUT", "バックエンド"],
+    "text": "フォームの保存ボタンがあるが、これは新規作成（POST）なのか更新（PUT/PATCH）なのか、画面から判断できない。新規作成と編集で同じフォームを使う場合、どのフィールドが編集不可になるか、URLはどう変わるかを明示すること。",
+    "rationale": "CRUD操作の区別はエンジニアが最初に確認する事項。曖昧だと実装着手が遅れる",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-api-list-search-params",
+    "title": "一覧取得時の検索条件がデザインから読めない",
+    "category": "spec-handoff",
+    "tags": ["API", "search", "query", "params", "一覧", "検索条件", "クエリ"],
+    "text": "一覧画面にフィルターや検索機能があるが、どのパラメータでAPIを叩くのか（名前検索？ステータス絞り込み？日付範囲？）が定義されていない。検索条件の組み合わせ（AND/OR）や、条件なしの場合のデフォルト表示も明示すること。",
+    "rationale": "検索パラメータが不明だとAPIの設計自体に影響し、バックエンド側も手戻りが発生する",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-realtime-or-manual-refresh",
+    "title": "データの更新タイミングが不明",
+    "category": "spec-handoff",
+    "tags": ["realtime", "polling", "refresh", "リアルタイム", "更新", "同期"],
+    "text": "一覧やダッシュボードのデータが、リアルタイムに更新されるのか、手動リロードが必要なのか、一定間隔でポーリングするのかが定義されていない。他のユーザーがデータを変更した場合の反映タイミングも含めて明示すること。",
+    "rationale": "リアルタイム同期とポーリングでは実装コストが10倍以上異なる。早期に方針を決めないと手戻りが大きい",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-parameter-increase-layout",
+    "title": "パラメータが増減するとレイアウトが崩れる",
+    "category": "ui-quality",
+    "tags": ["layout", "parameter", "dynamic", "tag", "badge", "可変", "増減", "崩れ"],
+    "text": "タグ・バッジ・チップなどの動的要素が1-2個で並んでいるが、実運用で10個になったとき、あるいは0個のときのレイアウトが検討されていない。折り返し時の見た目、表示上限（+N件）、0件時の表示を定義すること。",
+    "rationale": "動的パラメータの増減は最も予測しにくく、本番で初めて崩れが発覚するパターンが多い",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-number-format",
+    "title": "数値・日時のフォーマットが統一されていない",
+    "category": "ui-quality",
+    "tags": ["format", "date", "number", "currency", "日付", "数値", "フォーマット", "和暦"],
+    "text": "画面内で日付が「2024/3/1」「3月1日」「2024-03-01」のように混在している、または金額に桁区切りがない。日時フォーマット（和暦/西暦、時刻表示）と数値フォーマット（桁区切り、単位）を全画面で統一するルールを定めること。",
+    "rationale": "フォーマットの不統一は見た目の品質感を大きく下げ、データの読み間違いの原因にもなる",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-visual-hierarchy",
+    "title": "視覚的な優先順位がない（全部同じ重さに見える）",
+    "category": "ui-quality",
+    "tags": ["hierarchy", "typography", "weight", "視覚", "優先度", "強弱", "メリハリ"],
+    "text": "画面内の要素がすべて同じフォントサイズ・同じ色の濃さで表示されており、どこが重要な情報か一目で分からない。タイトル/本文/補助テキストのサイズ差、色の濃淡、余白の大小で情報の優先順位を視覚的に表現すること。",
+    "rationale": "メリハリのない画面は「全部読まないと分からない」状態になり、タスク完了までの時間が増える",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-spacing-inconsistent",
+    "title": "余白のリズムがバラバラ",
+    "category": "ui-quality",
+    "tags": ["spacing", "margin", "padding", "余白", "リズム", "グリッド", "美しさ"],
+    "text": "要素間の余白が場所によって異なり、統一感がない（あるセクション間が16px、別の箇所が24px、また別が12px）。余白の基準値（4の倍数など）を決め、セクション間/要素間/コンポーネント内の3段階で統一すること。",
+    "rationale": "余白の不揃いは「なんとなく雑に見える」最大の原因。デザインの品質感に直結する",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-color-meaning",
+    "title": "色に意味が割り当てられていない",
+    "category": "ui-quality",
+    "tags": ["color", "semantic", "status", "色", "セマンティック", "ステータス"],
+    "text": "ステータス表示やバッジに色が使われているが、色の意味（赤=エラー、緑=成功、黄=警告、青=情報）が統一されていない。または同じ色が異なる意味で使われている。色の意味ルールを定義し、画面全体で一貫させること。",
+    "rationale": "色の意味が不統一だとユーザーが状態を誤認し、操作ミスの原因になる",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-usecase-bulk-operation",
+    "title": "一括操作のユースケースが未定義",
+    "category": "flow-goal",
+    "tags": ["bulk", "batch", "checkbox", "select-all", "一括", "選択", "操作"],
+    "text": "一覧にチェックボックスがあるが、一括操作で何ができるのか（一括削除？ステータス変更？CSV出力？）が定義されていない。全選択の挙動（現在ページのみ？全件？）、操作後の確認、進捗表示も含めて明示すること。",
+    "rationale": "一括操作は影響範囲が大きく、ユースケースが不足するとデータ事故の原因になる",
+    "severity": "warning",
+    "goal": "flow-goal"
+  },
+  {
+    "id": "curated-usecase-concurrent-edit",
+    "title": "他ユーザーと同時編集する場合の挙動が未定義",
+    "category": "spec-handoff",
+    "tags": ["concurrent", "conflict", "lock", "同時編集", "排他", "競合"],
+    "text": "複数ユーザーが同じデータを同時に編集する可能性がある画面で、競合時の挙動が定義されていない。後勝ち？楽観ロック？編集中ロック？競合検出してユーザーに通知？方針を明示すること。",
+    "rationale": "同時編集の未対応はデータ消失という最悪のUXを引き起こす。B2Bでは複数人が同じ画面を使うことが日常",
+    "severity": "error",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-usecase-export",
+    "title": "データのエクスポート要件が不明",
+    "category": "flow-goal",
+    "tags": ["export", "CSV", "Excel", "PDF", "download", "エクスポート", "出力"],
+    "text": "一覧や詳細画面にエクスポート機能が必要だが、出力形式（CSV/Excel/PDF）、出力対象（表示中のデータ？全件？フィルター適用後？）、出力項目が定義されていない。顧客がデータをどう使うかを確認し、要件を明示すること。",
+    "rationale": "エクスポートはB2Bシステムで高確率で求められる機能。後から追加すると画面設計への影響が大きい",
+    "severity": "warning",
+    "goal": "flow-goal"
+  },
+  {
+    "id": "curated-notification-type",
+    "title": "通知・アラートの種別と出し方が未定義",
+    "category": "spec-handoff",
+    "tags": ["notification", "alert", "toast", "snackbar", "通知", "アラート", "種別"],
+    "text": "画面に通知やアラートを表示する必要があるが、種別（成功/警告/エラー/情報）ごとの見た目と表示方法（Toast？バナー？モーダル？）、自動消去の有無と秒数が定義されていない。種別×表示方法のルールを統一すること。",
+    "rationale": "通知の出し方がバラバラだとユーザーが重要度を判断できず、エラーを見逃す原因になる",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-organism-composition",
+    "title": "複合コンポーネントの構成ルールが不明",
+    "category": "ui-quality",
+    "tags": ["organism", "composition", "component", "構成", "複合", "Atomic Design"],
+    "text": "ヘッダー+フィルター+テーブル+ページネーションのように複数コンポーネントで構成された画面パーツが、どういうルールで組み合わされているか分からない。再利用するのかこの画面専用なのか、コンポーネント間の余白ルールは何かを明示すること。",
+    "rationale": "複合コンポーネントのルールが不明だと、別画面で似た構成を作るとき一貫性が崩れる",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-design-polish",
+    "title": "デザインの仕上げ品質が低い",
+    "category": "ui-quality",
+    "tags": ["polish", "alignment", "consistency", "仕上げ", "品質", "美しさ", "揃え"],
+    "text": "要素の左揃えがずれている、アイコンのサイズがバラバラ、角丸の値が統一されていない、線の太さが混在しているなど、細部の仕上げが甘い。これらは個々は小さいが、積み重なると「安っぽい」印象を与える。デザイントークンで値を統一すること。",
+    "rationale": "細部の品質は全体の印象を決める。揃っていないデザインは顧客の信頼感を下げる",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-accessibility-contrast",
+    "title": "テキストと背景のコントラストが不足",
+    "category": "ui-quality",
+    "tags": ["accessibility", "contrast", "WCAG", "色", "コントラスト", "読みやすさ"],
+    "text": "薄いグレーの背景に薄いグレーのテキストなど、コントラスト比が低い箇所がある。WCAG 2.2の基準（通常テキスト4.5:1以上、大文字テキスト3:1以上）を満たしているか確認すること。高齢のユーザーや明るい環境では特に読みにくくなる。",
+    "rationale": "コントラスト不足はアクセシビリティの基本。読めないUIはUIとして機能しない",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-accessibility-focus",
+    "title": "キーボード操作時のフォーカス表示がない",
+    "category": "ui-quality",
+    "tags": ["accessibility", "focus", "keyboard", "tab", "フォーカス", "キーボード"],
+    "text": "Tabキーで操作したとき、どの要素にフォーカスが当たっているか視覚的に分からない。フォーカスリング（青い枠線等）をすべてのインタラクティブ要素に定義すること。デザイン上で非表示にする場合はその代替手段を明示すること。",
+    "rationale": "キーボード操作はアクセシビリティの基本。フォーカス表示がないと操作不能になるユーザーがいる",
+    "severity": "warning",
+    "goal": "ui-quality"
+  }
+]

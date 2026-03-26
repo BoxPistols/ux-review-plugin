@@ -1,0 +1,152 @@
+[
+  {
+    "id": "curated-empty-state",
+    "title": "空状態（Empty State）が未定義",
+    "category": "flow-goal",
+    "tags": ["empty-state", "list", "table", "zero-data", "初期表示"],
+    "text": "一覧画面にデータが0件のときの表示が定義されていない。ユーザーは「読み込み中なのか」「本当に0件なのか」「エラーなのか」を判断できず、離脱や問い合わせの原因になる。空状態では次のアクション（データ追加ボタン、説明文）を提示すること。",
+    "rationale": "ユーザーが画面の意味を誤解し、サポート問い合わせや離脱の直接原因になる",
+    "severity": "error",
+    "goal": "flow-goal"
+  },
+  {
+    "id": "curated-feedback-after-action",
+    "title": "操作後のフィードバックが未定義",
+    "category": "flow-goal",
+    "tags": ["feedback", "submit", "save", "delete", "toast", "snackbar"],
+    "text": "ユーザーが送信・保存・削除を実行した後、成功/失敗のフィードバックが画面上に定義されていない。処理が完了したか判断できず、二重送信や離脱の原因になる。成功時・失敗時・処理中の3状態を定義すること。",
+    "rationale": "ヒューリスティック#1 システム状態の視認性。操作結果が分からないと二重操作やデータ不整合が発生する",
+    "severity": "error",
+    "goal": "flow-goal"
+  },
+  {
+    "id": "curated-no-back-navigation",
+    "title": "戻り導線がない",
+    "category": "flow-goal",
+    "tags": ["navigation", "back", "breadcrumb", "modal", "dead-end", "行き止まり"],
+    "text": "詳細画面やモーダルから元の画面に戻る導線が明示されていない。ユーザーが行き止まりになり、ブラウザバックに頼ることになる。戻るボタン・閉じるボタン・パンくずリストのいずれかを配置すること。",
+    "rationale": "ヒューリスティック#3 ユーザーの主導権と自由。行き止まりはフロー離脱の主因",
+    "severity": "error",
+    "goal": "flow-goal"
+  },
+  {
+    "id": "curated-ambiguous-primary-action",
+    "title": "主要アクションが判別できない",
+    "category": "flow-goal",
+    "tags": ["button", "CTA", "primary", "secondary", "アクション優先度"],
+    "text": "画面内に複数のボタンがあるが、どれが主要アクションか視覚的に区別されていない。ユーザーは「どれを押せばタスクが完了するか」を迷い、誤操作や離脱の原因になる。主要アクションは1つだけプライマリスタイルにすること。",
+    "rationale": "ボタンの視覚的重みが同じだと、ユーザーは目的のアクションを探すのに時間がかかる",
+    "severity": "warning",
+    "goal": "flow-goal"
+  },
+  {
+    "id": "curated-destructive-no-confirm",
+    "title": "破壊的操作に確認がない",
+    "category": "flow-goal",
+    "tags": ["delete", "destructive", "confirm", "dialog", "undo", "取り消し"],
+    "text": "削除やデータの取り消しなど、元に戻せない操作にユーザー確認（確認ダイアログ・Undo）が定義されていない。誤操作時にデータ損失が発生し、信頼を損なう。確認ダイアログまたはUndo機能を設計すること。",
+    "rationale": "ヒューリスティック#5 エラー防止。不可逆操作は最もクリティカルなエラー源",
+    "severity": "error",
+    "goal": "flow-goal"
+  },
+  {
+    "id": "curated-state-transition-undefined",
+    "title": "状態遷移が定義されていない",
+    "category": "spec-handoff",
+    "tags": ["state", "transition", "flow", "annotation", "ステータス", "遷移"],
+    "text": "画面に複数の状態（初期・入力中・完了・エラー等）が存在するが、どの操作でどの状態に遷移するかがデザインから読み取れない。エンジニアが自己判断で実装し、意図と異なる挙動になる。状態遷移の条件をアノテーションで明記すること。",
+    "rationale": "状態遷移の自己判断はデザイナーとエンジニア間の最大の手戻り原因",
+    "severity": "error",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-loading-state-missing",
+    "title": "ローディング状態が未定義",
+    "category": "spec-handoff",
+    "tags": ["loading", "skeleton", "spinner", "progress", "API", "非同期"],
+    "text": "データ取得や処理中のローディング表示が定義されていない。エンジニアはスケルトン/スピナー/プログレスバーのどれを使うか、どこに表示するかを自己判断することになる。ローディングの表示位置・種類・タイミングを明示すること。",
+    "rationale": "ローディングUXは実装者の裁量で大きく変わり、体験のバラつきを生む",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-validation-timing",
+    "title": "バリデーションのタイミングが不明",
+    "category": "spec-handoff",
+    "tags": ["validation", "form", "error", "input", "バリデーション", "エラー"],
+    "text": "フォームのエラー表示はデザインされているが、バリデーションがいつ発火するか（入力中/フォーカスアウト/送信時）が定義されていない。タイミングによってUXが大きく変わるため、エンジニアに判断を委ねるべきではない。",
+    "rationale": "リアルタイム検証と送信時検証では体験が全く異なる。未定義だとエンジニアごとに実装が分かれる",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-long-text-overflow",
+    "title": "テキストの最大長が未考慮",
+    "category": "spec-handoff",
+    "tags": ["text-overflow", "ellipsis", "truncation", "label", "長文", "折り返し"],
+    "text": "テキスト要素がデザイン上では短い文字列で表示されているが、実データでは長文になる可能性がある。折り返し/省略（ellipsis）/ツールチップのどれで対応するかが未定義だと、レイアウト崩れの原因になる。",
+    "rationale": "実データは理想的な長さではない。テストデータと本番データの乖離がレイアウト崩壊を引き起こす",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-responsive-undefined",
+    "title": "レスポンシブ対応が未定義",
+    "category": "spec-handoff",
+    "tags": ["responsive", "breakpoint", "mobile", "tablet", "adaptive", "レスポンシブ"],
+    "text": "デスクトップ幅のデザインのみ作成されており、タブレット・モバイル幅での表示が未定義。テーブルの横スクロール/カード化、ナビゲーションのハンバーガー化など、エンジニアが自己判断する範囲が広くなる。主要ブレークポイントでのデザインを用意すること。",
+    "rationale": "レスポンシブ未定義の画面は実装工数が膨らみ、手戻りの主因になる",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  },
+  {
+    "id": "curated-inconsistent-actions",
+    "title": "同じ意味の操作に異なるスタイル",
+    "category": "ui-quality",
+    "tags": ["consistency", "button", "icon", "link", "一貫性", "操作"],
+    "text": "同じ意味の操作（例: 編集、削除）が画面によって異なるスタイル（テキストリンク/アイコン/ボタン）で表現されている。ユーザーは同じ操作を別のものとして認識し、学習コストが上がる。同一操作は同一スタイルで統一すること。",
+    "rationale": "ヒューリスティック#4 一貫性と標準。一貫性の欠如は学習コストを直接増加させる",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-developer-terminology",
+    "title": "ラベルが開発者用語になっている",
+    "category": "ui-quality",
+    "tags": ["label", "terminology", "wording", "ラベル", "用語", "メンタルモデル"],
+    "text": "画面上のラベルやメニュー項目が開発者の言葉（「マスタ管理」「エンティティ」「インスタンス」等）で記述されている。ユーザーは自分のタスクとの対応が分からず、迷いの原因になる。ユーザーの業務用語に翻訳すること。",
+    "rationale": "ヒューリスティック#2 システムと現実世界の一致。開発用語はユーザーのメンタルモデルと乖離する",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-information-overload",
+    "title": "1画面の情報量が過剰",
+    "category": "ui-quality",
+    "tags": ["density", "progressive-disclosure", "cognitive-load", "情報量", "認知負荷"],
+    "text": "1画面に表示される情報要素が多すぎて、ユーザーが何を見るべきか判断できない。情報の優先順位を整理し、段階的に開示する（Progressive Disclosure）か、タブ/セクション分割で認知負荷を下げること。",
+    "rationale": "NN/g Progressive Disclosure。認知負荷が高い画面は滞在時間が長くなり、タスク完了率が下がる",
+    "severity": "warning",
+    "goal": "ui-quality"
+  },
+  {
+    "id": "curated-data-flow-between-screens",
+    "title": "画面間のデータの受け渡しが不明",
+    "category": "flow-goal",
+    "tags": ["flow", "data", "transition", "confirmation", "画面遷移", "データ連携"],
+    "text": "複数画面にまたがるフローで、前の画面で入力/選択した情報がどのように次の画面に反映されるかが定義されていない。確認画面に表示される項目、完了画面に表示される情報など、データの受け渡しを明示すること。",
+    "rationale": "フロー間のデータ連携が未定義だとエンジニアが仕様確認で戻ってくる最大の要因",
+    "severity": "error",
+    "goal": "flow-goal"
+  },
+  {
+    "id": "curated-permission-based-ui",
+    "title": "権限による表示分岐が未定義",
+    "category": "spec-handoff",
+    "tags": ["permission", "role", "RBAC", "admin", "権限", "ロール"],
+    "text": "管理者/一般ユーザー/閲覧者など、権限レベルによって表示・操作が変わる画面で、各ロールでの見え方が定義されていない。エンジニアがどのボタンを非表示/無効化するかを自己判断することになる。ロール別のデザインバリエーションを用意すること。",
+    "rationale": "権限分岐は実装コストが高く、後から追加すると大幅な手戻りになる",
+    "severity": "warning",
+    "goal": "spec-handoff"
+  }
+]
