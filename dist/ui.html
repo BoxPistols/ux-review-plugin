@@ -275,6 +275,17 @@ html, body {
   min-height: 40px;
 }
 .chat-send:hover { opacity: 0.88; }
+.chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+.chat-loading { color: var(--text-dim); font-size: 12px; font-style: italic; }
+.chat-copy-btn {
+  position: absolute; top: 6px; right: 6px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text-dim); cursor: pointer; padding: 2px 6px; font-size: 11px;
+  font-family: var(--font); opacity: 0; transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+}
+.chat-msg:hover .chat-copy-btn { opacity: 1; }
+.chat-copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.chat-copy-btn.copied { border-color: var(--green); color: var(--green); opacity: 1; }
 
 /* ── Chat overlay ── */
 .chat-overlay {
@@ -1637,9 +1648,13 @@ function sendChat() {
     chatHistory.push({ role: 'user', content: fullText })
   }
 
+  // ローディング表示
+  appendChatLoading()
+  $('btnChat').disabled = true
+
   // AI呼び出し
   var model = $('modelSelect').value, apiKey = $('apiKey').value.trim()
-  if (!apiKey) return
+  if (!apiKey) { removeChatLoading(); $('btnChat').disabled = false; return }
 
   var p
   if (isGemini(model)) {
@@ -1677,11 +1692,33 @@ function sendChat() {
   }
 
   p.then(function(reply) {
+    removeChatLoading()
+    $('btnChat').disabled = false
     chatHistory.push({ role: 'assistant', content: reply })
     appendChatMsg('ai', reply)
   }).catch(function(e) {
+    removeChatLoading()
+    $('btnChat').disabled = false
     addLog('reviewLog', 'error', 'チャットエラー: ' + e.message)
   })
+}
+
+// チャットローディング表示
+function appendChatLoading() {
+  var containers = [$('chatMessages'), $('chatOverlayMessages')]
+  for (var ci = 0; ci < containers.length; ci++) {
+    var c = containers[ci]
+    if (!c) continue
+    var div = document.createElement('div')
+    div.className = 'chat-msg ai chat-loading'
+    div.innerHTML = '<span class="spinner"></span> 回答を生成中...'
+    c.appendChild(div)
+    c.scrollTop = c.scrollHeight
+  }
+}
+function removeChatLoading() {
+  var loaders = document.querySelectorAll('.chat-loading')
+  for (var i = 0; i < loaders.length; i++) loaders[i].remove()
 }
 
 // チャットメッセージを両方のビュー（インライン＋オーバーレイ）に追加
@@ -1692,12 +1729,32 @@ function appendChatMsg(role, text, imgHtml) {
     if (!c) continue
     var div = document.createElement('div')
     div.className = 'chat-msg ' + role
-    if (imgHtml) div.innerHTML = imgHtml + esc(text || '')
-    else div.innerHTML = esc(text).replace(/\n/g, '<br>')
+    if (imgHtml) {
+      div.innerHTML = imgHtml + esc(text || '')
+    } else {
+      div.innerHTML = esc(text).replace(/\n/g, '<br>')
+    }
+    // AIメッセージにコピーボタン追加
+    if (role === 'ai') {
+      var copyBtn = document.createElement('button')
+      copyBtn.className = 'chat-copy-btn'
+      copyBtn.textContent = 'Copy'
+      copyBtn.setAttribute('data-raw', text)
+      div.style.position = 'relative'
+      div.appendChild(copyBtn)
+    }
     c.appendChild(div)
     c.scrollTop = c.scrollHeight
   }
 }
+
+// チャットメッセージのコピー（デリゲーション）
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.chat-copy-btn')
+  if (!btn) return
+  var rawText = btn.getAttribute('data-raw') || btn.parentNode.textContent || ''
+  copyToClipboard(rawText, btn, 'Copy')
+})
 
 $('btnChat').addEventListener('click', sendChat)
 $('chatInput').addEventListener('keydown', function(e) {
