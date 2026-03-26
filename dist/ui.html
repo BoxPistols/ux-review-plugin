@@ -200,9 +200,18 @@ html, body {
   margin: 0 -8px; contain: layout style;
 }
 .mod-item:hover { background: var(--surface-hi); }
+.mod-item:active { background: var(--accent-soft); }
+@keyframes flash { 0% { background: var(--accent-soft); } 100% { background: transparent; } }
+.mod-item.flashed { animation: flash 0.6s var(--ease); }
 .mod-item:last-child { border-bottom: none; }
 .mod-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
-.mod-target { color: var(--accent); font-family: var(--mono); font-size: 11px; font-weight: 600; }
+.mod-target { color: var(--accent); font-family: var(--mono); font-size: 11px; font-weight: 600; cursor: pointer; }
+.mod-target:hover { text-decoration: underline; }
+.mod-locate {
+  display: inline-block; width: 12px; height: 12px; vertical-align: middle;
+  margin-left: 2px; opacity: 0.4; transition: opacity 0.15s;
+}
+.mod-item:hover .mod-locate { opacity: 1; }
 .mod-action { color: var(--text-dim); font-family: var(--mono); font-size: 11px; }
 .mod-body { color: var(--text-sub); font-size: 13px; line-height: 1.9; }
 .mod-value { color: var(--text); font-weight: 600; }
@@ -1101,7 +1110,7 @@ function renderDetailItem(d, idx) {
   var h = '<div class="mod-item" data-target="' + esc(d.target || '') + '">'
   h += '<div class="mod-head">'
   if (d.source === 'static') h += '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:var(--accent-soft);color:var(--accent);font-weight:600;margin-right:4px;letter-spacing:0.03em">SPEC</span>'
-  if (d.target) h += '<span class="mod-target">' + esc(d.target) + '</span>'
+  if (d.target) h += '<span class="mod-target">' + esc(d.target) + '<svg class="mod-locate" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>'
   h += '<span class="mod-action">' + esc(d.category || '') + '</span>'
   h += '<button class="copy-btn" data-copy-text="' + esc(text).replace(/\n/g, '&#10;') + '">Copy</button>'
   h += '</div>'
@@ -1145,6 +1154,7 @@ function renderReviewPreview(r) {
 
   // セベリティ別にグルーピング
   if (r.details && r.details.length) {
+    h += '<div style="font-size:10px;color:var(--text-dim);padding:8px 0 2px;border-top:1px solid var(--border);margin-top:4px">クリックで Figma 上の該当要素にジャンプ</div>'
     var groups = { critical: [], warning: [], good: [] }
     for (var i = 0; i < r.details.length; i++) {
       var sev = r.details[i].severity || 'warning'
@@ -1428,11 +1438,17 @@ function addLog(logId, type, message) {
 // イベント
 // ══════════════════════════════════════════════════════════════
 $('btnReview').addEventListener('click', doReviewImprove)
-// 修正リストのクリック → Figma上でノードをハイライト
+// 修正リストのクリック → Figma上でノードをハイライト + フラッシュ
 $('reviewPreview').addEventListener('click', function(e) {
+  // コピーボタンは除外
+  if (e.target.closest('.copy-btn')) return
   var item = e.target.closest('.mod-item')
   if (item && item.getAttribute('data-target')) {
     parent.postMessage({ pluginMessage: { type: 'highlight-node', nodeName: item.getAttribute('data-target') } }, '*')
+    // フラッシュアニメーション
+    item.classList.remove('flashed')
+    void item.offsetWidth // reflow で再トリガー
+    item.classList.add('flashed')
   }
 })
 $('btnUndo').addEventListener('click', function() {
