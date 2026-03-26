@@ -444,31 +444,49 @@ figma.ui.onmessage = function(msg) {
     var nodeName = msg.nodeName;
     if (!nodeName) return;
 
+    // 複合target（"A / B / C"）→ 各パーツを候補にする
+    var candidates = [nodeName];
+    if (nodeName.indexOf(" / ") !== -1) {
+      candidates = candidates.concat(nodeName.split(" / ").map(function(s) { return s.trim(); }));
+    }
+
     var target = null;
     var sel = figma.currentPage.selection;
 
-    // 1) 選択中ノード自身が対象か
-    if (sel.length && sel[0].name === nodeName) { target = sel[0]; }
-    // 2) 選択中ノードの子孫を検索
+    // 選択中ノード群の中だけを浅く検索（depth制限付き）
+    function shallowFind(node, names, depth) {
+      if (depth > 5) return null;
+      for (var c = 0; c < names.length; c++) {
+        if (node.name === names[c]) return node;
+      }
+      if ("children" in node) {
+        var kids = node.children;
+        for (var i = 0; i < kids.length; i++) {
+          var found = shallowFind(kids[i], names, depth + 1);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    // 1) 選択中ノード群とその子孫を浅く検索
+    for (var si = 0; si < sel.length && !target; si++) {
+      target = shallowFind(sel[si], candidates, 0);
+    }
+    // 2) 選択中ノードの親フレームを浅く検索
     if (!target && sel.length) {
       var root = sel[0];
-      // 親フレームまで遡る（子ノードが選択中の場合）
       while (root.parent && root.parent.type !== "PAGE") root = root.parent;
-      if (typeof root.findOne === "function") {
-        target = root.findOne(function(n) { return n.name === nodeName; });
-      }
+      target = shallowFind(root, candidates, 0);
     }
-    // 3) ページ全体から検索
-    if (!target) {
-      target = figma.currentPage.findOne(function(n) { return n.name === nodeName; });
-    }
+    // ページ全体検索はしない（フリーズ防止）
 
     if (target) {
       figma.currentPage.selection = [target];
       figma.viewport.scrollAndZoomIntoView([target]);
       figma.notify(target.name + " (" + Math.round(target.width) + "x" + Math.round(target.height) + ")");
     } else {
-      figma.notify(nodeName + " が見つかりません");
+      figma.notify(nodeName + " が見つかりません（選択範囲内に限定）");
     }
   }
 
