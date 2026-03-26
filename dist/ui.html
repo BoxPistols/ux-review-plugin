@@ -1129,12 +1129,10 @@ function textToParagraphs(text) {
   return paragraphs.join('')
 }
 
-// SpecBridge API: レビュー結果に関連仕様を非同期追加
+// SpecBridge API: レビュー結果に関連仕様 + Curated Snippets を非同期追加
 function enrichWithSpecs(details) {
   if (!details || !details.length) return
-  // DOM クエリを1回だけ取得してキャッシュ
   var modItems = document.querySelectorAll('.mod-item')
-  // 全リクエストの結果を集めてからバッチでDOM更新
   var pendingUpdates = []
   var remaining = 0
 
@@ -1144,33 +1142,51 @@ function enrichWithSpecs(details) {
     remaining++
     var q = (d.category || '') + ' ' + (d.target || '') + ' ' + ((d.message || '').split('\n')[0] || '').slice(0, 100)
     var ctrl = new AbortController()
-    var timer = setTimeout(function() { ctrl.abort() }, 2000)
+    var timer = setTimeout(function() { ctrl.abort() }, 3000)
     fetch('https://a11y-spec-bridge.vercel.app/api/spec-search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: q.trim(), k: 2 }),
+      body: JSON.stringify({ query: q.trim(), k: 3, mode: reviewMode }),
       signal: ctrl.signal
     }).then(function(r) { clearTimeout(timer); return r.ok ? r.json() : null })
     .then(function(data) {
       if (data && data.results) {
-        var refs = data.results.filter(function(r) { return r.score >= 0.6 })
+        var refs = data.results.filter(function(r) { return r.score >= 0.55 })
         if (refs.length) pendingUpdates.push({ idx: idx, refs: refs })
       }
     }).catch(function() {})
     .then(function() {
       remaining--
       if (remaining <= 0) {
-        // 全リクエスト完了後に1回だけDOM更新
         requestAnimationFrame(function() {
           for (var u = 0; u < pendingUpdates.length; u++) {
             var upd = pendingUpdates[u]
-            if (modItems[upd.idx]) {
-              var refDiv = document.createElement('div')
-              refDiv.style.cssText = 'margin-top:6px;font-size:11px;color:var(--text-dim)'
-              refDiv.innerHTML = upd.refs.map(function(r) {
-                return '<a href="' + esc(r.url) + '" target="_blank" style="color:var(--accent);margin-right:8px">' + esc(r.source + ': ' + r.title) + '</a>'
-              }).join('')
-              modItems[upd.idx].appendChild(refDiv)
+            if (!modItems[upd.idx]) continue
+            var refHtml = ''
+            for (var ri = 0; ri < upd.refs.length; ri++) {
+              var ref = upd.refs[ri]
+              if (ref.source === 'CURATED') {
+                // Curated Snippet: question を問いかけとして表示
+                var qText = ref.question || ref.title || ''
+                var tText = ref.text || ''
+                refHtml += '<div style="margin-top:8px;padding:8px 10px;background:var(--accent-soft);border-radius:6px;font-size:12px;line-height:1.7">'
+                refHtml += '<div style="color:var(--accent);font-weight:600;margin-bottom:2px">' + esc(qText) + '</div>'
+                if (tText) refHtml += '<div style="color:var(--text-sub)">' + esc(tText).slice(0, 200) + '</div>'
+                refHtml += '</div>'
+              } else {
+                // 仕様リンク（WCAG/ARIA/MDN等）
+                if (ref.url) {
+                  refHtml += '<div style="margin-top:4px;font-size:11px">'
+                  refHtml += '<a href="' + esc(ref.url) + '" target="_blank" style="color:var(--accent);margin-right:8px">' + esc((ref.source || '') + ': ' + (ref.title || '')) + '</a>'
+                  refHtml += '</div>'
+                }
+              }
+            }
+            if (refHtml) {
+              var container = document.createElement('div')
+              container.style.cssText = 'margin-top:6px'
+              container.innerHTML = refHtml
+              modItems[upd.idx].appendChild(container)
             }
           }
         })
