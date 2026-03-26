@@ -86,7 +86,7 @@ html, body {
   width: 28px; height: 28px; background: transparent; border: 1px solid transparent;
   border-radius: 6px; cursor: pointer; color: var(--text-dim);
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s var(--ease);
+  transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
 }
 .icon-btn:hover { background: var(--surface-hi); color: var(--text-sub); border-color: var(--border); }
 
@@ -102,13 +102,13 @@ html, body {
 .s-input, .s-select {
   flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
   padding: 6px 10px; font-size: 12px; color: var(--text); outline: none;
-  font-family: var(--mono); min-width: 0; transition: all 0.2s var(--ease);
+  font-family: var(--mono); min-width: 0; transition: border-color 0.2s var(--ease);
 }
 .s-input:focus, .s-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .btn-test {
   padding: 5px 14px; background: transparent; border: 1px solid var(--border);
   border-radius: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer;
-  font-family: var(--font); font-weight: 500; transition: all 0.2s var(--ease);
+  font-family: var(--font); font-weight: 500; transition: border-color 0.2s var(--ease), color 0.2s var(--ease), background 0.2s var(--ease);
 }
 .btn-test:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .btn-test:disabled { opacity: 0.3; }
@@ -124,8 +124,8 @@ html, body {
 .panel-body {
   flex: 1; overflow-y: auto; padding: 12px 16px;
   display: flex; flex-direction: column; gap: 8px;
-  contain: layout style;
-  -webkit-overflow-scrolling: touch;
+  contain: layout style paint;
+  will-change: scroll-position;
 }
 .panel-body::-webkit-scrollbar { width: 3px; }
 .panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
@@ -146,7 +146,7 @@ html, body {
   width: 100%; flex: 1; min-height: 0;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 8px; padding: 12px; color: var(--text); outline: none;
-  resize: none; line-height: 1.65; transition: all 0.2s var(--ease);
+  resize: none; line-height: 1.65; transition: border-color 0.2s var(--ease);
 }
 .prompt { font-size: 13px; font-family: var(--font); }
 .json-input { font-size: 12px; font-family: var(--mono); }
@@ -196,8 +196,8 @@ html, body {
 .mod-item {
   font-size: 13px; color: var(--text);
   padding: 14px 10px; border-bottom: 1px solid var(--border);
-  line-height: 1.8; letter-spacing: 0.02em; cursor: pointer; transition: background 0.15s;
-  margin: 0 -8px;
+  line-height: 1.8; letter-spacing: 0.02em; cursor: pointer;
+  margin: 0 -8px; contain: layout style;
 }
 .mod-item:hover { background: var(--surface-hi); }
 .mod-item:last-child { border-bottom: none; }
@@ -212,7 +212,7 @@ html, body {
 .review-modes { display: flex; gap: 4px; padding: 6px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
 .r-chip {
   padding: 4px 12px; font-size: 12px; border: 1px solid var(--border); border-radius: 16px;
-  color: var(--text-dim); cursor: pointer; user-select: none; transition: all 0.15s;
+  color: var(--text-dim); cursor: pointer; user-select: none; transition: border-color 0.15s, color 0.15s, background-color 0.15s;
 }
 .r-chip:hover { border-color: var(--border-hi); color: var(--text-sub); }
 .r-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
@@ -274,7 +274,7 @@ html, body {
 .copy-btn {
   background: none; border: 1px solid var(--border); border-radius: 4px;
   color: var(--text-dim); cursor: pointer; padding: 2px 6px; font-size: 12px;
-  font-family: var(--font); transition: all 0.15s; flex-shrink: 0; line-height: 1;
+  font-family: var(--font); transition: border-color 0.15s, color 0.15s; flex-shrink: 0; line-height: 1;
 }
 .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
 .copy-btn.copied { border-color: var(--green); color: var(--green); }
@@ -291,7 +291,7 @@ html, body {
 .hist-score.low { color: var(--red); }
 .hist-name { font-size: 13px; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hist-date { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
-.hist-summary { font-size: 12px; color: var(--text-sub); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: all 0.2s; }
+.hist-summary { font-size: 12px; color: var(--text-sub); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .hist-item.expanded .hist-summary { -webkit-line-clamp: unset; display: block; }
 .hist-tobe { font-size: 12px; color: var(--green); line-height: 1.6; margin-top: 8px; display: none; }
 .hist-item.expanded .hist-tobe { display: block; }
@@ -365,7 +365,7 @@ html, body {
 .log-btn {
   background: none; border: 1px solid var(--border); border-radius: 4px;
   color: var(--text-dim); cursor: pointer; padding: 3px 8px; font-size: 11px;
-  font-family: var(--font); transition: all 0.15s;
+  font-family: var(--font); transition: border-color 0.15s, color 0.15s;
 }
 .log-btn:hover { border-color: var(--accent); color: var(--accent); }
 .log-btn.danger:hover { border-color: var(--red); color: var(--red); }
@@ -405,7 +405,7 @@ html, body {
 }
 .sel-dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim);
-  transition: all 0.3s var(--ease); flex-shrink: 0;
+  transition: background-color 0.3s var(--ease), box-shadow 0.3s var(--ease); flex-shrink: 0;
 }
 .sel-dot.on { background: var(--green); box-shadow: 0 0 8px rgba(52,211,153,0.4); }
 .sel-name { font-size: 12px; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -432,7 +432,7 @@ html, body {
   flex: 1; padding: 9px 12px; border: none; border-radius: 8px;
   font-size: 12px; font-weight: 600; cursor: pointer;
   font-family: var(--font); letter-spacing: 0.01em;
-  transition: all 0.2s var(--ease); position: relative; overflow: hidden;
+  transition: box-shadow 0.2s var(--ease), transform 0.2s var(--ease), border-color 0.2s var(--ease), background-color 0.2s var(--ease); position: relative; overflow: hidden;
 }
 .btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .btn-primary {
@@ -1045,10 +1045,16 @@ function textToParagraphs(text) {
 // SpecBridge API: レビュー結果に関連仕様を非同期追加
 function enrichWithSpecs(details) {
   if (!details || !details.length) return
+  // DOM クエリを1回だけ取得してキャッシュ
+  var modItems = document.querySelectorAll('.mod-item')
+  // 全リクエストの結果を集めてからバッチでDOM更新
+  var pendingUpdates = []
+  var remaining = 0
+
   details.forEach(function(d, idx) {
     if (d.severity !== 'critical' && d.severity !== 'warning') return
     if (d.source === 'static') return
-    // クエリ: category + target + message の1行目
+    remaining++
     var q = (d.category || '') + ' ' + (d.target || '') + ' ' + ((d.message || '').split('\n')[0] || '').slice(0, 100)
     var ctrl = new AbortController()
     var timer = setTimeout(function() { ctrl.abort() }, 2000)
@@ -1059,20 +1065,30 @@ function enrichWithSpecs(details) {
       signal: ctrl.signal
     }).then(function(r) { clearTimeout(timer); return r.ok ? r.json() : null })
     .then(function(data) {
-      if (!data || !data.results) return
-      var refs = data.results.filter(function(r) { return r.score >= 0.6 })
-      if (!refs.length) return
-      // 該当の mod-item に根拠リンクを追加
-      var items = document.querySelectorAll('.mod-item')
-      if (items[idx]) {
-        var refDiv = document.createElement('div')
-        refDiv.style.cssText = 'margin-top:6px;font-size:11px;color:var(--text-dim)'
-        refDiv.innerHTML = refs.map(function(r) {
-          return '<a href="' + esc(r.url) + '" target="_blank" style="color:var(--accent);margin-right:8px">' + esc(r.source + ': ' + r.title) + '</a>'
-        }).join('')
-        items[idx].appendChild(refDiv)
+      if (data && data.results) {
+        var refs = data.results.filter(function(r) { return r.score >= 0.6 })
+        if (refs.length) pendingUpdates.push({ idx: idx, refs: refs })
       }
-    }).catch(function() { /* API失敗時はスキップ */ })
+    }).catch(function() {})
+    .then(function() {
+      remaining--
+      if (remaining <= 0) {
+        // 全リクエスト完了後に1回だけDOM更新
+        requestAnimationFrame(function() {
+          for (var u = 0; u < pendingUpdates.length; u++) {
+            var upd = pendingUpdates[u]
+            if (modItems[upd.idx]) {
+              var refDiv = document.createElement('div')
+              refDiv.style.cssText = 'margin-top:6px;font-size:11px;color:var(--text-dim)'
+              refDiv.innerHTML = upd.refs.map(function(r) {
+                return '<a href="' + esc(r.url) + '" target="_blank" style="color:var(--accent);margin-right:8px">' + esc(r.source + ': ' + r.title) + '</a>'
+              }).join('')
+              modItems[upd.idx].appendChild(refDiv)
+            }
+          }
+        })
+      }
+    })
   })
 }
 
@@ -1647,19 +1663,25 @@ $('btnDlReview').addEventListener('click', function() {
   $('resizeTR').addEventListener('mousedown', startDrag('tr'))
   $('resizeBL').addEventListener('mousedown', startDrag('bl'))
   $('resizeBR').addEventListener('mousedown', startDrag('br'))
+  var rafPending = false
   window.addEventListener('mousemove', function(e) {
-    if (!mode) return
-    var dx = e.clientX - sx, dy = e.clientY - sy
-    var w = sw, h = sh
-    if (mode === 'r')  { w = sw + dx }
-    if (mode === 'l')  { w = sw - dx }
-    if (mode === 't')  { h = sh - dy }
-    if (mode === 'b')  { h = sh + dy }
-    if (mode === 'br') { w = sw + dx; h = sh + dy }
-    if (mode === 'bl') { w = sw - dx; h = sh + dy }
-    if (mode === 'tr') { w = sw + dx; h = sh - dy }
-    if (mode === 'tl') { w = sw - dx; h = sh - dy }
-    postResize(Math.max(380, w), Math.max(400, h))
+    if (!mode || rafPending) return
+    rafPending = true
+    var ex = e.clientX, ey = e.clientY
+    requestAnimationFrame(function() {
+      rafPending = false
+      var dx = ex - sx, dy = ey - sy
+      var w = sw, h = sh
+      if (mode === 'r')  { w = sw + dx }
+      if (mode === 'l')  { w = sw - dx }
+      if (mode === 't')  { h = sh - dy }
+      if (mode === 'b')  { h = sh + dy }
+      if (mode === 'br') { w = sw + dx; h = sh + dy }
+      if (mode === 'bl') { w = sw - dx; h = sh + dy }
+      if (mode === 'tr') { w = sw + dx; h = sh - dy }
+      if (mode === 'tl') { w = sw - dx; h = sh - dy }
+      postResize(Math.max(380, w), Math.max(400, h))
+    })
   })
   window.addEventListener('mouseup', function() { mode = null })
 })()
