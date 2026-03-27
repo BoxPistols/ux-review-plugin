@@ -1622,10 +1622,10 @@ function initChat() {
   show($('chatSection'))
 }
 
-function sendChat() {
-  var text = $('chatInput').value.trim()
+function sendChat(directText) {
+  var text = directText || $('chatInput').value.trim()
   if (!text && !chatImage) return
-  $('chatInput').value = ''
+  $('chatInput').value = ''; $('chatOverlayInput').value = ''
   var img = chatImage
   chatImage = null; $('chatImgPreview').innerHTML = ''
 
@@ -1763,21 +1763,14 @@ $('chatInput').addEventListener('keydown', function(e) {
 
 // オーバーレイからの送信
 $('btnChatOverlay').addEventListener('click', function() {
-  // オーバーレイの入力をインラインに転送して送信
   var text = $('chatOverlayInput').value.trim()
-  if (!text) return
-  $('chatInput').value = text
-  $('chatOverlayInput').value = ''
-  sendChat()
+  if (text) sendChat(text)
 })
 $('chatOverlayInput').addEventListener('keydown', function(e) {
   if (e.key === 'Enter' && !e.isComposing && (e.metaKey || e.ctrlKey)) {
     e.preventDefault()
     var text = $('chatOverlayInput').value.trim()
-    if (!text) return
-    $('chatInput').value = text
-    $('chatOverlayInput').value = ''
-    sendChat()
+    if (text) sendChat(text)
   }
 })
 

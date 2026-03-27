@@ -444,25 +444,25 @@ figma.ui.onmessage = function(msg) {
     var nodeName = msg.nodeName;
     if (!nodeName) return;
 
-    // 複合target（"A / B / C"）→ 各パーツを候補にする
-    var candidates = [nodeName];
+    // 複合target（"A / B / C"）→ 各パーツを候補にする（Objectで高速検索）
+    var candidateSet = {};
+    candidateSet[nodeName] = true;
     if (nodeName.indexOf(" / ") !== -1) {
-      candidates = candidates.concat(nodeName.split(" / ").map(function(s) { return s.trim(); }));
+      var parts = nodeName.split(" / ");
+      for (var pi = 0; pi < parts.length; pi++) { candidateSet[parts[pi].trim()] = true; }
     }
 
     var target = null;
     var sel = figma.currentPage.selection;
 
     // 選択中ノード群の中だけを浅く検索（depth制限付き）
-    function shallowFind(node, names, depth) {
+    function shallowFind(node, nameSet, depth) {
       if (depth > 5) return null;
-      for (var c = 0; c < names.length; c++) {
-        if (node.name === names[c]) return node;
-      }
+      if (nameSet[node.name]) return node;
       if ("children" in node) {
         var kids = node.children;
         for (var i = 0; i < kids.length; i++) {
-          var found = shallowFind(kids[i], names, depth + 1);
+          var found = shallowFind(kids[i], nameSet, depth + 1);
           if (found) return found;
         }
       }
@@ -471,13 +471,13 @@ figma.ui.onmessage = function(msg) {
 
     // 1) 選択中ノード群とその子孫を浅く検索
     for (var si = 0; si < sel.length && !target; si++) {
-      target = shallowFind(sel[si], candidates, 0);
+      target = shallowFind(sel[si], candidateSet, 0);
     }
     // 2) 選択中ノードの親フレームを浅く検索
     if (!target && sel.length) {
       var root = sel[0];
       while (root.parent && root.parent.type !== "PAGE") root = root.parent;
-      target = shallowFind(root, candidates, 0);
+      target = shallowFind(root, candidateSet, 0);
     }
     // ページ全体検索はしない（フリーズ防止）
 
@@ -495,9 +495,10 @@ figma.ui.onmessage = function(msg) {
     figma.clientStorage.getAsync("review_history").then(function(existing) {
       var history = existing || [];
       history.unshift(msg.entry);
-      // ピン付きは無制限、通常は最大20件
+      // ピン付きは最大50件、通常は最大20件
       var pinned = history.filter(function(e) { return e.pinned; });
       var unpinned = history.filter(function(e) { return !e.pinned; });
+      if (pinned.length > 50) pinned = pinned.slice(0, 50);
       if (unpinned.length > 20) unpinned = unpinned.slice(0, 20);
       history = pinned.concat(unpinned);
       return figma.clientStorage.setAsync("review_history", history).then(function() {
@@ -528,18 +529,18 @@ figma.ui.onmessage = function(msg) {
   }
 
   // ── ログ編集 ──
+  var EDITABLE_FIELDS = ["asIs", "toBe", "memo", "pattern"];
   if (msg.type === "update-review") {
     figma.clientStorage.getAsync("review_history").then(function(existing) {
       var history = existing || [];
       for (var i = 0; i < history.length; i++) {
         if (history[i].id === msg.id) {
-          // detail_N フィールドは details 配列の N 番目の message を更新
           if (msg.field.indexOf("detail_") === 0) {
             var idx = parseInt(msg.field.split("_")[1]);
             if (history[i].details && history[i].details[idx]) {
               history[i].details[idx].message = msg.value;
             }
-          } else {
+          } else if (EDITABLE_FIELDS.indexOf(msg.field) !== -1) {
             history[i][msg.field] = msg.value;
           }
           history[i].editedAt = Date.now();
