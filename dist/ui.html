@@ -1701,16 +1701,23 @@ function sendChat(directText) {
     })
   }
 
-  p.then(function(reply) {
+  // タイムアウト（20秒）
+  var chatTimeout = new Promise(function(_, reject) {
+    setTimeout(function() { reject(new Error('タイムアウト（20秒）。もう一度お試しください')) }, 20000)
+  })
+  Promise.race([p, chatTimeout]).then(function(reply) {
     removeChatLoading()
     $('btnChat').disabled = false
+    if (!reply || !reply.trim()) {
+      appendChatMsg('ai', '（空のレスポンスが返されました。質問を変えてお試しください）')
+      return
+    }
     chatHistory.push({ role: 'assistant', content: reply })
     appendChatMsg('ai', reply)
   }).catch(function(e) {
     removeChatLoading()
     $('btnChat').disabled = false
-    // エラーをチャット内に表示（reviewLogは見えない位置にあるため）
-    appendChatMsg('ai', 'エラー: ' + e.message)
+    appendChatMsg('ai', 'エラー: ' + (e.message || '不明なエラー') + '\n\nモデル: ' + model)
   })
 }
 
