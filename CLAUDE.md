@@ -152,6 +152,31 @@
 - `pnpm dev & pnpm storybook & pnpm -F app1 dev & ... & wait`
 - 個別起動: `pnpm --filter app-name dev`
 
+## OSS公開アプリのレート制限パターン
+- デフォルトAPIキー利用にサーバーサイドでデイリー制限を設ける
+- 招待コード（env変数管理）で制限緩和。localStorage保存 + APIヘッダー送信
+- ユーザー自身のAPIキー入力で無制限利用（制限バイパス）
+- カウント管理: Vercel KV / Upstash Redis でIP or 招待コード別デイリーカウント
+- 3層: OSS一般（厳しい制限）→ 招待あり（緩い制限）→ 自前キー（無制限）
+- Claude Codeスキル `/rate-limit-setup` で新規アプリにも一発適用可能
+- テンプレート: `~/.claude/skills/rate-limit-setup/templates/`
+
+## パネルリサイズ汎用パターン
+- トグルボタンは translate-x-full でパネル外に突き出す（リサイズハンドルと物理分離）
+- リサイズ: RAF スロットリング + iframe オーバーレイ（マウスイベント横取り防止）
+- 入力エリアのリサイズ: 上部ドラッグハンドルバー方式（ブラウザネイティブresizeより操作性良い）
+- ナロー幅検知: ResizeObserver でコンテナ幅監視 → アイコンのみ表示に切り替え
+
+## ブラウザ互換ダウンロードパターン
+- `createElement('a')` → DOM に appendChild → click() → setTimeout で removeChild + revokeObjectURL
+- Safari は DOM 未追加の要素の click() を無視するため appendChild 必須
+- revokeObjectURL は 100ms 遅延（非同期ダウンロード開始を待つ）
+
+## React ステートアップデーター純粋性
+- `setState(prev => ...)` 内に副作用（localStorage, alert, fetch 等）を入れない
+- React 18 Strict Mode でアップデーターは2回実行される → alert二重表示、save二重書き込み
+- 対策: 外側で計算 → save → setState(value) → alert の順で実行
+
 ---
 <!-- このファイルは claude-memory-sync が管理します -->
 <!-- 自由に編集してください。cm コマンドで同期されます -->
@@ -210,6 +235,47 @@
 - dist/ui.html: 単一HTML（CSS + JS 含む）
 - curated-snippets-final.json: SpecBridge 投入用ナレッジ 28件
 - manifest.json: SpecBridge ドメイン追加済み
+
+### セキュリティ・品質
+- update-review のフィールド書き込みは EDITABLE_FIELDS ホワイトリストで制限（プロトタイプ汚染防止）
+- highlight-node の候補検索は Object ハッシュ（O(1)）
+- ピン付きログ上限 50件（clientStorage 容量保護）
+- AIにURLを生成させない。検証済みURLはSpecBridge APIのみ
+
+### 競合分析（2026-03時点）
+- onBeacon（Apple Siri チーム発）: 600+ベストプラクティス、GPT-5+Claude搭載。最大手
+- ClarityUX: ヒートマップ+A/Bテスト+リンティング。全部入り
+- Review Raven: LP/メール/SNS向け即時フィードバック
+- Design Lint / Stark: ルールベースリンティング / アクセシビリティ特化
+- 全て英語圏のLP/マーケ/プロダクトデザイン向け
+- 日本B2B特化・要件→実装の橋渡し検証は空白地帯
+
+### ポジショニング（Figma Community公開時）
+- 「デザインレビュー」ではなく「要件→実装の橋渡し検証」として位置づける
+- 差別化: タブ別前提分離 / 日本語B2B / Curated Snippets / ログ管理 / 深掘りチャット
+- 被る部分: AIフィードバック全般 / アクセシビリティ / デザインリンティング
+
+### ファイル構成（更新）
+- docs/curated-snippets-final.json に移動済み
+
+### チャットの既知問題・修正履歴
+- チャットレスポンスが空で表示される問題あり（Gemini の空レスポンス / 安全フィルター等）
+- エラーを reviewLog ではなくチャット内に直接表示するよう修正済み
+- 20秒タイムアウト追加済み
+- 空レスポンス検出 + ユーザー向けメッセージ追加済み
+- まだ空レスポンス問題が再発している可能性あり → 次回セッションで要調査（APIレスポンス構造のデバッグ）
+
+### 今セッションの実装履歴（81b1eb5→a104668）
+1. 未対応3点修正（空欄文言・Few-shot・閾値50文字）
+2. ログタブ追加（ヘッダータブ・ピン・編集・取捨選択・メモ）
+3. パフォーマンス改善（transition:all排除・contain・RAF・バッチDOM）
+4. ハイライト（ロケートアイコン・フラッシュ・depth制限・ページ全検索廃止）
+5. 情報設計モード強化（静的チェック除外・専用プロンプト）
+6. チャット改善（panel-body外分離・リサイズ・オーバーレイ・ローディング・コピー）
+7. URL生成禁止（根拠は出典名のみ、SpecBridge APIが検証済みURL提供）
+8. Curated Snippets 28件（2段階構造・タブ別mode・SpecBridge投入済み）
+9. レビュー指摘5点修正（ホワイトリスト・Set化・ピン上限・直接送信・docs移動）
+10. チャットAPI修正（空レスポンス・タイムアウト・エラー詳細）
 
 ### 3者連携
 - specbridge: SpecBridge API提供。Curated Snippets の CURATED ソース対応済み

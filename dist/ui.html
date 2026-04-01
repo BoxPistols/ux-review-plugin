@@ -1596,25 +1596,57 @@ var chatHistory = []
 
 function initChat() {
   if (!currentReview) return
+
+  // フレーム情報
+  var frameInfo = ''
+  if (selectedNodes.length) {
+    frameInfo = selectedNodes.map(function(n) { return n.name + ' (' + n.width + 'x' + n.height + 'px)' }).join(', ')
+  }
+
+  // ユーザーストーリー
+  var userStory = ($('ctxNote') && $('ctxNote').value) ? $('ctxNote').value.trim() : ''
+
+  // モード名
+  var modeNames = { ia: '情報設計', visual: 'ビジュアルデザイン', system: 'デザインシステム', handoff: '実装引継ぎ' }
+  var modeName = modeNames[reviewMode] || reviewMode
+
+  // レビュー結果サマリー
   var reviewSummary = 'スコア: ' + currentReview.score + '/100'
   if (currentReview.pattern) reviewSummary += '\nパターン: ' + currentReview.pattern
   reviewSummary += '\n現状分析: ' + (currentReview.asIs || '')
   reviewSummary += '\n改善提案: ' + (currentReview.toBe || '')
-  reviewSummary += '\n指摘:\n' + ((currentReview.details || []).map(function(d) { return '[' + d.severity + '] ' + d.category + ': ' + d.message }).join('\n'))
+  reviewSummary += '\n指摘:\n' + ((currentReview.details || []).map(function(d, i) { return (i + 1) + '. [' + d.severity + '] ' + d.category + ': ' + d.message }).join('\n'))
+
+  // ノード構造（チャット用に先頭1500文字に制限）
+  var nodeStructure = pendingReviewText ? pendingReviewText.substring(0, 1500) : ''
 
   chatHistory = [
     { role: 'system', content: [
-      'あなたはUI/UXデザインの専門家です。デザイナーからの質問に日本語で答えてください。',
+      'あなたはUI/UXデザインの専門家です。Figmaプラグインでのデザインレビュー後の深掘りチャットです。',
+      '',
+      '【あなたの役割】',
+      '先ほど行ったレビュー結果について、デザイナーからの質問に日本語で対話してください。',
+      'レビュー結果の具体的な指摘内容・フレーム構造・レビュー観点を踏まえて回答してください。',
+      '「この指摘」「さっきの」「それ」などの指示語は、レビュー結果の指摘やフレームを指しています。',
+      '',
+      '【対象フレーム】',
+      frameInfo || '（不明）',
+      userStory ? '【ユーザーストーリー】\n' + userStory : '',
+      '',
+      '【レビュー観点】' + modeName,
+      '',
+      '【レビュー結果】',
+      reviewSummary,
+      '',
+      '【フレーム構造（抜粋）】',
+      nodeStructure || '（構造情報なし）',
       '',
       '【回答ルール】',
+      '- 会話の流れを意識し、前の回答を踏まえて答えること',
       '- 質問の大きさに応じて回答量を調整すること',
       '- 簡単な質問（はい/いいえ、1点の確認）→ 1-3文で簡潔に',
-      '- 具体的な改善依頼 → 5-8文で具体案を提示',
-      '- 「Figma上でどこをどう変えるか」を具体的に書く',
-      '- 長文の箇条書きを安易に使わない',
-      '',
-      '【前のレビュー結果（この会話の文脈）】',
-      reviewSummary,
+      '- 具体的な改善依頼 → 具体案を提示（Figma上でどこをどう変えるか）',
+      '- URLを生成・捏造しないこと',
     ].join('\n') }
   ]
   $('chatMessages').innerHTML = ''
@@ -1668,7 +1700,7 @@ function sendChat(directText) {
     }
     p = fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system_instruction: { parts: [{ text: chatHistory[0].content }] }, contents: geminiContents })
+      body: JSON.stringify({ system_instruction: { parts: [{ text: chatHistory[0].content }] }, contents: geminiContents, generationConfig: { temperature: 0.7, maxOutputTokens: 2000 } })
     }).then(function(r) {
       if (!r.ok) return r.json().then(function(e) { throw new Error((e.error && e.error.message) || 'Gemini error ' + r.status) })
       return r.json()
@@ -1691,7 +1723,7 @@ function sendChat(directText) {
     }
     p = fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({ model: model, messages: oaiMessages, max_completion_tokens: text.length < 50 ? 500 : 1500 })
+      body: JSON.stringify({ model: model, messages: oaiMessages, max_completion_tokens: 2000 })
     }).then(function(r) {
       if (!r.ok) return r.json().then(function(e) { throw new Error((e.error && e.error.message) || 'OpenAI error ' + r.status) })
       return r.json()
@@ -1703,7 +1735,7 @@ function sendChat(directText) {
 
   // タイムアウト（20秒）
   var chatTimeout = new Promise(function(_, reject) {
-    setTimeout(function() { reject(new Error('タイムアウト（20秒）。もう一度お試しください')) }, 20000)
+    setTimeout(function() { reject(new Error('タイムアウト（30秒）。もう一度お試しください')) }, 30000)
   })
   Promise.race([p, chatTimeout]).then(function(reply) {
     removeChatLoading()
