@@ -178,5 +178,5 @@ Features:
 • Chat with AI about specific design decisions
 • Review history with automatic saving
 
-Supports OpenAI (GPT-5.4) and Google Gemini (2.5 Flash, free tier available).
+Supports OpenAI (GPT-5.6 Luna) and Google Gemini (2.5 Flash, free tier available).
 ```

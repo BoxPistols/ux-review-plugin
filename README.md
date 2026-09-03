@@ -38,8 +38,7 @@ npm install  # テスト用
 | モデル | 取得先 |
 |---|---|
 | Gemini 2.5 Flash（無料） | [Google AI Studio](https://aistudio.google.com/apikey) |
-| gpt-5.4-nano | [OpenAI Platform](https://platform.openai.com/api-keys) |
-| gpt-5.4-mini | [OpenAI Platform](https://platform.openai.com/api-keys) |
+| gpt-5.6-luna | [OpenAI Platform](https://platform.openai.com/api-keys) |
 
 ## 使い方
 

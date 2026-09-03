@@ -187,7 +187,7 @@
 
 ### プラグイン概要
 - Figma Plugin。フレーム選択→AIレビュー→深掘りチャット
-- AI: Gemini 2.5 Flash / GPT-5.4-nano/mini
+- AI: Gemini 2.5 Flash / GPT-5.6 Luna
 - SpecBridge API 連携（仕様検索 + Curated Snippets）
 - ログタブ: ピン留め・インライン編集・指摘取捨選択・メモ
 
