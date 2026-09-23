@@ -37,7 +37,6 @@ npm install  # テスト用
 
 | モデル | 取得先 |
 |---|---|
-| Gemini 2.5 Flash（無料） | [Google AI Studio](https://aistudio.google.com/apikey) |
 | gpt-6-luna | [OpenAI Platform](https://platform.openai.com/api-keys) |
 
 ## 使い方
