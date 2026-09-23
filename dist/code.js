@@ -253,6 +253,13 @@ function extractNode(node, depth) {
   return s;
 }
 
+// 選べるモデル。一覧外の保存値（外したGemini等）はselectが空になるので既定に戻す
+var MODEL_IDS = ["gpt-6-luna"];
+var DEFAULT_MODEL = "gpt-6-luna";
+function resolveModel(saved) {
+  return MODEL_IDS.indexOf(saved) >= 0 ? saved : DEFAULT_MODEL;
+}
+
 function detectPatterns(node, extracted) {
   var hints = [];
   if (!("children" in node) || !node.children.length) return hints;
@@ -617,7 +624,7 @@ figma.ui.onmessage = function(msg) {
     ]).then(function(r) {
       var locale = "ja";
       try { if (figma.currentUser && figma.currentUser.locale) locale = figma.currentUser.locale; } catch(e) {}
-      figma.ui.postMessage({ type: "settings-loaded", apiKey: r[0] || "", model: r[1] || "gemini-2.5-flash", locale: locale });
+      figma.ui.postMessage({ type: "settings-loaded", apiKey: r[0] || "", model: resolveModel(r[1]), locale: locale });
     });
     // 初回選択通知
     notifySelection();
@@ -633,7 +640,7 @@ figma.ui.onmessage = function(msg) {
   if (msg.type === "save-settings") {
     Promise.all([
       figma.clientStorage.setAsync("api_key", msg.apiKey || ""),
-      figma.clientStorage.setAsync("model", msg.model || "gemini-2.5-flash"),
+      figma.clientStorage.setAsync("model", resolveModel(msg.model)),
     ]);
   }
 
